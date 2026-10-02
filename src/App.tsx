@@ -3,7 +3,7 @@ import confetti from "canvas-confetti";
 import { APP_NAME, DEFAULT_MEMORIES, EMOTIONS, EmotionKey, FINAL_DEFAULT, Memory } from "./data/memories";
 import {
   loadMemories, saveMemories, loadFinal, saveFinal, loadProgress, saveProgress, resetProgress,
-  loadPublished, applyMemoryOverrides, loadLocalMemoryOverrides, loadLocalFinalOverride, Progress,
+  loadPublished, applyMemoryOverrides, loadLocalMemoryOverrides, loadLocalFinalOverride, clearLocalContent, Progress,
 } from "./data/store";
 import { Sphere } from "./components/Sphere";
 import { MemoryExperience } from "./components/MemoryExperience";
@@ -37,9 +37,17 @@ export default function App() {
   const updateMemories = (list: Memory[]) => { setMemories(list); saveMemories(list); };
   const updateFinal = (f: typeof FINAL_DEFAULT) => { setFinal(f); saveFinal(f); };
 
-  // Paràmetres de la URL: ?bola=N  ?editar=1  ?reset=1
+  // Paràmetres de la URL: ?bola=N  ?editar=1  ?reset=1  ?neteja=1
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
+    if (p.get("neteja") === "1") {
+      clearLocalContent();
+      resetProgress();
+      setProgress({});
+      window.history.replaceState({}, "", window.location.pathname);
+      window.location.reload();
+      return;
+    }
     if (p.get("reset") === "1") {
       resetProgress();
       setProgress({});
