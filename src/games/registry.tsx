@@ -57,7 +57,7 @@ export const GAME_DEFS: Record<string, GameDef> = {
   recycle: { key: "recycle", name: "Ordena el caos", short: "Classifica 10 objectes", time: "1-2 min", Comp: GameRecycle },
   hanoi: { key: "hanoi", name: "Torres de Hanoi", short: "3 discs, mínim 7 movs", time: "2 min", Comp: GameHanoi },
   targets: { key: "targets", name: "Dianes", short: "10 dianes ràpides", time: "45s", Comp: GameTargets },
-  stroop: { key: "stroop", name: "Color trampa", short: "Color vs paraula, 10 rondes", time: "30s", Comp: GameStroop },
+  stroop: { key: "stroop", name: "Color trampa", short: "Color vs paraula, 6 colors, 10 rondes", time: "30s", Comp: GameStroop },
   dice21: { key: "dice21", name: "Dau 21", short: "Blackjack amb daus", time: "1 min", Comp: GameDice21 },
   story: { key: "story", name: "Ordena la nostra història", short: "Cronologia de moments", time: "1 min", Comp: GameStory, fields: [{ key: "events", label: "Momentos EN ORDEN correcto (uno por línea, 3-7, en catalán)", type: "textarea", placeholder: "Vas néixer tu\nPrimer estiu a la platja\nAvui" }] },
   evens: { key: "evens", name: "Caça parells", short: "Només números parells", time: "30s", Comp: GameEvens },
