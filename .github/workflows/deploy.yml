@@ -1,9 +1,10 @@
 name: Publicar en GitHub Pages
 
+# Se ejecuta cada vez que subes cambios a la rama principal
 on:
   push:
     branches: [main, master]
-  workflow_dispatch:
+  workflow_dispatch: # permite lanzarlo a mano desde la pestaña "Actions"
 
 permissions:
   contents: read
@@ -28,6 +29,7 @@ jobs:
 
       - name: Comprobar estructura de archivos
         run: |
+          # Si los archivos quedaron dentro de una subcarpeta (ej. al arrastrar la carpeta a GitHub)
           if [ ! -f package.json ]; then
             echo "package.json no está en la raíz. Buscando en subcarpetas..."
             SUBDIR=$(find . -maxdepth 2 -name package.json -not -path "./node_modules/*" | head -n 1)
@@ -45,6 +47,31 @@ jobs:
           fi
           echo "Archivos listos para compilar:"
           ls -la
+
+      - name: Comprobar que están todos los archivos
+        run: |
+          FALTAN=0
+          for f in index.html package.json vite.config.ts tsconfig.json \
+                   src/main.tsx src/App.tsx src/index.css \
+                   src/data/memories.ts src/data/store.ts \
+                   src/components/Sphere.tsx src/components/Editor.tsx \
+                   src/components/MemoryExperience.tsx src/components/PrintSheets.tsx \
+                   src/games/common.tsx src/games/registry.tsx \
+                   src/games/set1.tsx src/games/set2.tsx src/games/set3.tsx; do
+            if [ ! -f "$f" ]; then
+              echo "::error::FALTA EL ARCHIVO: $f"
+              FALTAN=1
+            fi
+          done
+          if [ "$FALTAN" = "1" ]; then
+            echo ""
+            echo "Contenido actual del repositorio:"
+            find . -path ./node_modules -prune -o -path ./.git -prune -o -type f -print | sort
+            echo ""
+            echo "Sube los archivos que faltan respetando sus carpetas (src/, src/data/, src/components/, src/games/)."
+            exit 1
+          fi
+          echo "Todos los archivos necesarios están presentes."
 
       - name: Instalar dependencias
         run: npm install --legacy-peer-deps
