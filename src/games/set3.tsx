@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GameProps, GameHeader, WinBanner, useElapsed, shuffle, formatTime } from "./common";
 
 /* CAÇA PARELLS */
@@ -226,22 +226,29 @@ export function GameLights({ onComplete }: GameProps) {
 /* ZONA VERDA */
 export function GameTiming({ onComplete }: GameProps) {
   const [pos, setPos] = useState(0);
-  const [dir, setDir] = useState(1);
   const [round, setRound] = useState(1);
   const [hits, setHits] = useState(0);
   const [done, setDone] = useState(false);
   const [msg, setMsg] = useState("");
-  const speed = 2 + round * 0.9;
+  const posRef = useRef(0);
+  const dirRef = useRef(1);
 
   useEffect(() => {
     if (done) return;
-    const t = setInterval(() => { setPos((p) => { let n = p + dir * speed; if (n >= 100) { n = 100; setDir(-1); } if (n <= 0) { n = 0; setDir(1); } return n; }); }, 16);
+    const speed = 2 + round * 0.9;
+    const t = setInterval(() => {
+      let n = posRef.current + dirRef.current * speed;
+      if (n >= 100) { n = 100; dirRef.current = -1; }
+      if (n <= 0) { n = 0; dirRef.current = 1; }
+      posRef.current = n;
+      setPos(n);
+    }, 16);
     return () => clearInterval(t);
-  }, [dir, done, round]);
+  }, [done, round]);
 
   const stop = () => {
     if (done || msg) return;
-    const inZone = pos >= 42 && pos <= 58;
+    const inZone = posRef.current >= 42 && posRef.current <= 58;
     if (inZone) setHits((h) => h + 1);
     setMsg(inZone ? "✅ A dins!" : "❌ A fora! Ajusta l'ull.");
     setTimeout(() => { setMsg(""); if (round >= 5) { setDone(true); const h = hits + (inZone ? 1 : 0); onComplete(h * 150, `${h}/5`); } else setRound(round + 1); }, 700);
