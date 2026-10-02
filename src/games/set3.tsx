@@ -438,3 +438,58 @@ export function GameStory({ onComplete, config }: GameProps) {
     </div>
   );
 }
+
+/* ENDEVINALLA (resposta escrita) */
+function normalize(s: string) {
+  return s.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9ç\s]/g, "");
+}
+export function GameRiddle({ onComplete, config }: GameProps) {
+  const question = String(config?.question || "").trim();
+  const answers = String(config?.answer || "")
+    .split(",")
+    .map((a) => normalize(a))
+    .filter(Boolean);
+  const [value, setValue] = useState("");
+  const [tries, setTries] = useState(0);
+  const [feed, setFeed] = useState<"" | "no">("");
+  const [won, setWon] = useState(false);
+
+  const send = () => {
+    if (!value.trim() || won) return;
+    const nt = tries + 1;
+    setTries(nt);
+    const ok = answers.length === 0 ? false : answers.includes(normalize(value));
+    if (ok) {
+      setWon(true);
+      onComplete(Math.max(100, 400 - (nt - 1) * 60), `${nt} ${nt === 1 ? "intent" : "intents"}`);
+    } else {
+      setFeed("no");
+      setTimeout(() => setFeed(""), 500);
+    }
+  };
+  const reset = () => { setValue(""); setTries(0); setFeed(""); setWon(false); };
+
+  return (
+    <div>
+      <GameHeader instruction="Pensa-hi bé abans de respondre." extra={tries > 0 ? <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-black text-stone-600">{tries} {tries === 1 ? "intent" : "intents"}</span> : undefined} />
+      {!won ? (
+        <div className="text-center">
+          {question && <div className="whitespace-pre-line rounded-2xl bg-stone-900 p-5 text-lg font-black leading-snug text-white">{question}</div>}
+          <div className={`mx-auto mt-4 flex max-w-[320px] gap-2 ${feed === "no" ? "animate-shake" : ""}`}>
+            <input
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && send()}
+              placeholder="Escriu la teva resposta…"
+              className={`w-full rounded-xl border-2 px-4 py-2.5 text-center text-lg font-black outline-none ${feed === "no" ? "border-red-400" : "border-stone-200 focus:border-amber-400"}`}
+            />
+            <button onClick={send} className="shrink-0 rounded-xl bg-amber-400 px-5 font-black text-stone-900 hover:bg-amber-300">OK</button>
+          </div>
+          {feed === "no" && <p className="mt-2 text-sm font-bold text-red-600">No és això… torna-ho a pensar!</p>}
+        </div>
+      ) : (
+        <WinBanner title="Correcte! 🎉" subtitle="Has endevinat la connexió." score={`${tries} ${tries === 1 ? "intent" : "intents"}`} onRestart={reset} />
+      )}
+    </div>
+  );
+}
