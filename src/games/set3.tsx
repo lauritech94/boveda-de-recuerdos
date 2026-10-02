@@ -148,16 +148,52 @@ export function GameLock({ onComplete, config }: GameProps) {
 }
 
 /* STROOP */
-const STROOP = [{ w: "VERMELL", c: "Blau", col: "#0ea5e9" }, { w: "VERD", c: "Vermell", col: "#ef4444" }, { w: "BLAU", c: "Verd", col: "#22c55e" }, { w: "GROC", c: "Vermell", col: "#ef4444" }];
-const STROOP_OPTS = ["Vermell", "Blau", "Verd", "Groc"];
-const STROOP_HEX: Record<string, string> = { Vermell: "#ef4444", Blau: "#0ea5e9", Verd: "#22c55e", Groc: "#eab308" };
+const STROOP_OPTS = ["Vermell", "Blau", "Verd", "Groc", "Lila", "Marró"];
+const STROOP_HEX: Record<string, string> = { Vermell: "#ef4444", Blau: "#0ea5e9", Verd: "#22c55e", Groc: "#eab308", Lila: "#a855f7", Marró: "#92400e" };
+type StroopRound = { w: string; c: string; col: string };
+
+/** Genera 10 rondes on: la paraula NO coincideix amb la tinta, cap paraula ni cap tinta
+ *  es repeteix a rondes seguides, i cap paraula ni tinta surt més de 2 vegades. */
+function genStroop(): StroopRound[] {
+  for (let attempt = 0; attempt < 300; attempt++) {
+    const rounds: StroopRound[] = [];
+    const wordUse: Record<string, number> = {};
+    const inkUse: Record<string, number> = {};
+    let ok = true;
+    for (let i = 0; i < 10; i++) {
+      const prev = rounds[i - 1];
+      const words = shuffle(STROOP_OPTS).filter((w) => (wordUse[w] || 0) < 2 && (!prev || w !== prev.w));
+      let placed = false;
+      for (const w of words) {
+        const inks = shuffle(STROOP_OPTS).filter((c) => c !== w && (inkUse[c] || 0) < 2 && (!prev || c !== prev.c));
+        if (inks.length) {
+          const c = inks[0];
+          rounds.push({ w: w.toUpperCase(), c, col: STROOP_HEX[c] });
+          wordUse[w] = (wordUse[w] || 0) + 1;
+          inkUse[c] = (inkUse[c] || 0) + 1;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) { ok = false; break; }
+    }
+    if (ok) return rounds;
+  }
+  // Plan B (molt improbable): rotació simple sense repeticions
+  return Array.from({ length: 10 }, (_, i) => {
+    const w = STROOP_OPTS[i % 6];
+    const c = STROOP_OPTS[(i + 2 + Math.floor(i / 6)) % 6];
+    return { w: w.toUpperCase(), c, col: STROOP_HEX[c] };
+  });
+}
+
 export function GameStroop({ onComplete }: GameProps) {
-  const [rounds] = useState(() => Array.from({ length: 10 }, () => STROOP[Math.floor(Math.random() * STROOP.length)]));
+  const [rounds, setRounds] = useState<StroopRound[]>(() => genStroop());
   const [idx, setIdx] = useState(0);
   const [score, setScore] = useState(0);
   const [feed, setFeed] = useState<null | string>(null);
   const [done, setDone] = useState(false);
-  const [time, setTime] = useState(25);
+  const [time, setTime] = useState(30);
 
   useEffect(() => {
     if (done) return;
@@ -177,13 +213,13 @@ export function GameStroop({ onComplete }: GameProps) {
       {!done ? (
         <div className="text-center">
           <div className="rounded-2xl bg-white p-6 ring-1 ring-stone-200"><p className="text-5xl font-black tracking-wide" style={{ color: rounds[idx].col }}>{rounds[idx].w}</p><p className="mt-1 text-xs font-bold text-stone-400">De quin color està pintada?</p></div>
-          <div className="mx-auto mt-3 grid max-w-[320px] grid-cols-2 gap-2">
+          <div className="mx-auto mt-3 grid max-w-[340px] grid-cols-2 gap-2">
             {STROOP_OPTS.map((o) => (<button key={o} onClick={() => pick(o)} className={`flex items-center gap-2 rounded-xl px-4 py-3 font-black ring-1 transition-all active:scale-95 ${feed === o ? (o === rounds[idx].c ? "bg-emerald-500 text-white" : "animate-shake bg-red-500 text-white") : "bg-white ring-stone-200 hover:bg-stone-50"}`}><span className="h-4 w-4 rounded-full" style={{ background: STROOP_HEX[o] }} /> {o}</button>))}
           </div>
           <p className="mt-2 text-xs font-black text-stone-500">Encerts: {score}</p>
         </div>
       ) : (
-        <WinBanner title={score >= 8 ? "Cervell flexible! 🌀" : "Bon esforç!"} subtitle={`${score} de 10 encerts.`} score={`${score}/10`} onRestart={() => { setIdx(0); setScore(0); setDone(false); setTime(25); }} />
+        <WinBanner title={score >= 8 ? "Cervell flexible! 🌀" : "Bon esforç!"} subtitle={`${score} de 10 encerts.`} score={`${score}/10`} onRestart={() => { setRounds(genStroop()); setIdx(0); setScore(0); setDone(false); setTime(30); }} />
       )}
     </div>
   );
