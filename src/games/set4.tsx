@@ -58,9 +58,12 @@ export function GameTug({ onComplete, config }: GameProps) {
         <div className="absolute left-1/2 top-0 h-full w-0.5 -translate-x-1/2 bg-stone-400/60" />
         <span className="absolute left-2 top-1/2 -translate-y-1/2 text-3xl">{OPP}</span>
         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-3xl">🧑</span>
+        {/* Línies de meta: quan la corda les toca, s'acaba */}
+        <div className="absolute inset-y-0 left-[18%] w-0.5 bg-red-400/70" />
+        <div className="absolute inset-y-0 right-[18%] w-0.5 bg-emerald-500/70" />
         <span
-          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 text-4xl transition-all duration-100"
-          style={{ left: `${Math.min(88, Math.max(12, pos))}%` }}
+          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 text-4xl"
+          style={{ left: `${18 + Math.min(100, Math.max(0, pos)) * 0.64}%`, transition: "left 80ms linear" }}
         >
           🪢
         </span>
