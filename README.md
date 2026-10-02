@@ -1,7 +1,34 @@
-# 🔮 La Bóveda de Recuerdos
+# 🔮 La Càmera dels Records
 
-Experiencia interactiva inspirada en las esferas de recuerdos de *Inside Out*.
-**30 bolas físicas con etiqueta NFC** → cada una abre un minijuego → al superarlo se desbloquea una **foto + un mensaje personal**. Al completar las 30, aparece el **recuerdo final**.
+Experiencia interactiva (en catalán) inspirada en las esferas de recuerdos de *Inside Out*.
+**30 bolas físicas con etiqueta NFC** → cada una abre una esfera → al superar su reto se desbloquea una **foto + un mensaje personal**.
+
+**Esferas especiales:**
+| Esfera | Qué es |
+|---|---|
+| **1** | Mensaje de inicio (la historia del Minion). Se desbloquea sola al abrirla. |
+| **2-9, 11-19, 21-29** | Minijuego → foto + mensaje |
+| **10** | 🎁 Regalo: el iPhone (toca la caja 3 veces) |
+| **20** | 🎁 Regalo: el viaje |
+| **30** | 🎬 Vídeo final. Solo se abre cuando las otras 29 ya están desbloqueadas. |
+
+---
+
+## 🔄 Reiniciar el juego desde cero (para tus pruebas)
+
+El progreso (qué esferas están desbloqueadas) se guarda **en el navegador de cada dispositivo**. Tienes tres formas de volver a 0:
+
+1. **Con la URL mágica (lo más rápido):** abre en el móvil u ordenador
+   ```
+   https://TU-USUARIO.github.io/boveda-de-recuerdos/?reset=1
+   ```
+   Verás el aviso *"Progrés reiniciat"* y todas las esferas vuelven a estar encriptadas.
+2. **Desde el panel de edición:** abre `?editar=1` → arriba, en la *Zona de pruebas*, pulsa **Reiniciar progreso**. Ahí también tienes **Desbloquear todas** para revisar las 30 revelaciones sin jugar.
+3. **Modo incógnito:** cada ventana de incógnito empieza siempre de cero. Ideal para probar como si fueras tu hermana.
+
+> ⚠️ **Antes del gran día:** el reinicio solo afecta al dispositivo donde lo haces. Si has probado la web en el móvil de tu hermana, abre ahí `?reset=1`. Tus fotos y textos **no se borran** (viven en `recuerdos.json`), solo el progreso.
+
+> 💡 En la pantalla de inicio las esferas bloqueadas **no se pueden abrir tocándolas** (sale el aviso de acercar el móvil a la bola). Para probar una esfera sin NFC, abre directamente su URL: `?bola=7`.
 
 ---
 
@@ -169,13 +196,15 @@ npm run preview  # prueba el resultado compilado
 
 ### 4.1 · Usar el panel de edición (lo más cómodo)
 
-1. Abre la web y pulsa **⚙️ Editar fichas** (o añade `?editar=1` a la URL).
+1. Abre la web añadiendo `?editar=1` a la URL (el panel no tiene botón visible, para que tu hermana no lo encuentre).
 2. Despliega cada esfera y rellena:
-   - **Foto** (subir archivo o pegar una URL)
-   - **Mensaje personal** que verá tu hermana
+   - **Foto** (subir archivo o escribir la ruta `fotos/01.jpg`)
+   - **Mensaje personal en catalán** que verá tu hermana
    - **Título, emoción, época y pista**
-   - **Ajustes del juego**: el año secreto, el apodo del Wordle, la fecha del candado, las preguntas del trivial…
-3. Pulsa **Exportar JSON** → se descargará el archivo **`recuerdos.json`**.
+   - **Ajustes del juego**: el año secreto, el apodo, la fecha del candado, las preguntas del trivial…
+   - **Esfera 10 y 20:** emoji y nombre del regalo
+   - **Esfera 30:** enlace del vídeo (YouTube *no listado*, Vimeo, Google Drive o un `.mp4` en `public/video/`)
+3. Pulsa **Exportar recuerdos.json** → se descargará el archivo **`recuerdos.json`**.
 
 ### 4.2 · Publicar ese contenido para que lo vea tu hermana ⚠️ IMPORTANTE
 
