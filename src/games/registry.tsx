@@ -1,6 +1,7 @@
 import { GameOrder30, GameNonogram, GameSliding, GameTargets, GameMemory, GameSimon, GameMaze, GameWhack, GameGuess, GameWordle } from "./set1";
 import { GameSoup, GameMath, GameDiff, GameSequence, GameCatch, GameTrivia, GameAnagram, GameRPS, GameTicTac, GameReflex } from "./set2";
 import { GameEvens, GameHanoi, GameIntruder, GameLock, GameStroop, GameLights, GameTiming, GameRecycle, GameFlash, GameDice21, GameStory, GameRiddle } from "./set3";
+import { GameTug, GameStack, GameScratch } from "./set4";
 
 export type ConfigField = { key: string; label: string; type: "text" | "number" | "textarea"; help?: string; placeholder?: string };
 
@@ -60,6 +61,14 @@ export const GAME_DEFS: Record<string, GameDef> = {
   dice21: { key: "dice21", name: "Dau 21", short: "Blackjack amb daus", time: "1 min", Comp: GameDice21 },
   story: { key: "story", name: "Ordena la nostra història", short: "Cronologia de moments", time: "1 min", Comp: GameStory, fields: [{ key: "events", label: "Momentos EN ORDEN correcto (uno por línea, 3-7, en catalán)", type: "textarea", placeholder: "Vas néixer tu\nPrimer estiu a la platja\nAvui" }] },
   evens: { key: "evens", name: "Caça parells", short: "Només números parells", time: "30s", Comp: GameEvens },
+  tug: { key: "tug", name: "Tira i arronsa", short: "Toca ràpid per estirar la corda", time: "30s", Comp: GameTug, fields: [
+    { key: "opponent", label: "Emoji del rival", type: "text", placeholder: "🍌" },
+  ] },
+  stack: { key: "stack", name: "Torre de blocs", short: "Apila 10 blocs amb punteria", time: "1 min", Comp: GameStack },
+  scratch: { key: "scratch", name: "Rasca i guanya", short: "Rasca per descobrir el secret", time: "30s", Comp: GameScratch, fields: [
+    { key: "secret", label: "Texto oculto bajo la capa de plata (en catalán; admite emojis y saltos de línea)", type: "textarea", placeholder: "24 de juliol de 2010" },
+    { key: "label", label: "Frase de ayuda (en catalán)", type: "text", placeholder: "Rasca per descobrir la data" },
+  ] },
   riddle: { key: "riddle", name: "Endevinalla", short: "Escriu la resposta correcta", time: "1 min", Comp: GameRiddle, fields: [
     { key: "question", label: "Enunciado de la endevinalla (en catalán, se muestra en la pantalla del juego)", type: "textarea", placeholder: "🪶 Un cap indi.\n🦜 Jack.\n\nQuè tenen en comú?" },
     { key: "answer", label: "Respuesta(s) válidas separadas por coma (sin acentos, minúsculas)", type: "text", placeholder: "plomes,plumes,ploma,pluma" },
