@@ -1,64 +1,96 @@
-export type EmotionKey = "alegria" | "tristeza" | "ira" | "asco" | "miedo";
+export type EmotionKey = "alegria" | "tristesa" | "rabia" | "fastic" | "por";
+export type MemoryKind = "intro" | "game" | "gift" | "video";
 
-export const EMOTIONS: Record<EmotionKey, { name: string; color: string; glow: string; soft: string; text: string; emoji: string; desc: string }> = {
-  alegria: { name: "Alegría", color: "#FFD23F", glow: "rgba(255,210,63,0.55)", soft: "#FFF4C2", text: "#8a6500", emoji: "⭐", desc: "Momentos que nos hicieron reír" },
-  tristeza: { name: "Tristeza", color: "#4F86F7", glow: "rgba(79,134,247,0.55)", soft: "#DCE8FF", text: "#1d3f8f", emoji: "💧", desc: "Momentos duros que nos unieron" },
-  ira: { name: "Ira", color: "#F0433A", glow: "rgba(240,67,58,0.55)", soft: "#FFDAD7", text: "#8f1b14", emoji: "🔥", desc: "Peleas y enfados que hoy dan risa" },
-  asco: { name: "Asco", color: "#5FC96F", glow: "rgba(95,201,111,0.55)", soft: "#D8F5DD", text: "#1f6b2c", emoji: "🥦", desc: "Cosas que no soportábamos" },
-  miedo: { name: "Miedo", color: "#A868F2", glow: "rgba(168,104,242,0.55)", soft: "#EBDCFF", text: "#4e1f8f", emoji: "⚡", desc: "Sustos y primeras veces" },
+export const EMOTIONS: Record<EmotionKey, { name: string; color: string; glow: string; soft: string; text: string; emoji: string }> = {
+  alegria: { name: "Alegria", color: "#ffd93d", glow: "rgba(255,217,61,0.55)", soft: "#fff7d6", text: "#8a6500", emoji: "⭐" },
+  tristesa: { name: "Tristesa", color: "#4d96ff", glow: "rgba(77,150,255,0.55)", soft: "#dce8ff", text: "#1d3f8f", emoji: "💧" },
+  rabia: { name: "Ràbia", color: "#ff6b6b", glow: "rgba(255,107,107,0.55)", soft: "#ffdad7", text: "#8f1b14", emoji: "🔥" },
+  fastic: { name: "Fàstic", color: "#6bcb77", glow: "rgba(107,203,119,0.55)", soft: "#d8f5dd", text: "#1f6b2c", emoji: "🥦" },
+  por: { name: "Por", color: "#b983ff", glow: "rgba(185,131,255,0.55)", soft: "#ebdcff", text: "#4e1f8f", emoji: "⚡" },
 };
 
 export type Memory = {
   id: number;
+  kind: MemoryKind;
   title: string;
   emotion: EmotionKey;
-  emotion2?: EmotionKey; // esfera bicolor opcional
-  when: string; // "Verano 2009", "Tenías 6 años"
-  hint: string; // pista antes del juego
+  emotion2?: EmotionKey;
+  when: string;
+  hint: string;
   gameKey: string;
-  gameWhy: string; // por qué este juego conecta con el recuerdo
-  message: string; // texto personal al desbloquear
-  photo: string; // URL o dataURL
+  gameWhy: string;
+  message: string;
+  photo: string;
   photoCaption?: string;
   config?: Record<string, any>;
 };
 
+export const APP_NAME = "La Càmera dels Records";
+
 export const FINAL_DEFAULT = {
-  title: "El recuerdo que seguimos escribiendo",
+  title: "Has recuperat tots els records",
   message:
-    "Has desbloqueado los 30. Pero el verdadero recuerdo central no cabe en una esfera: eres tú, y todo lo que todavía nos queda por vivir juntas. Gracias por ser mi hermana. Te quiero.",
+    "El Minion ja no pot fer-hi res: les 30 esferes tornen a brillar. Però el record més important no cap en cap esfera: ets tu, i tot el que encara ens queda per viure juntes. T'estimo.",
   photo: "",
 };
 
+export const INTRO_TEXT = `Aquesta nit, un Minion molt trapella ha volgut robar-te els teus records.
+
+Per sort hem aconseguit recuperar-los abans que se'ls emportés.
+
+Però, ell ha volgut fer de les seves i ha barrejat els records i ha encriptat el contingut de les esferes de memòria.
+
+Ara ja no pots veure què guarda cadascuna d'elles.
+
+Si vols tornar a descobrir els teus records, hauràs de desxifrar les esferes una a una per revelar el que contenen.
+
+Ningú sap què conté cada esfera.
+
+Ho hauràs de descobrir tu.
+
+✨
+
+Com que et volem ajudar, aquesta primera esfera ja ha estat desxifrada.
+
+Les següents depenen de tu.`;
+
+const PH = "Escriu aquí el teu text per a aquest record…";
+
 export const DEFAULT_MEMORIES: Memory[] = [
-  { id: 1, title: "El día que llegaste", emotion: "alegria", when: "El principio de todo", hint: "Todo empezó con un número: el año en que la familia creció.", gameKey: "guess", gameWhy: "Adivina el año en que naciste (o la edad que tenía yo).", message: "Aquí va tu texto: cuenta cómo fue el día que llegó a casa, qué sentiste, qué dijeron papá y mamá…", photo: "", config: { secret: 2005, min: 1990, max: 2025, label: "¿En qué año naciste?" } },
-  { id: 2, title: "La casa de los abuelos", emotion: "alegria", emotion2: "tristeza", when: "Todos los veranos", hint: "Un lugar con olor a cocina y tardes largas. Encuentra lo que siempre había allí.", gameKey: "memory", gameWhy: "Parejas de memoria con los objetos de la casa de los abuelos.", message: "Escribe aquí qué hacíais en casa de los abuelos, la merienda, el patio, los cuentos…", photo: "", config: { emojis: "🍪,🧶,📻,🪴,🐓,☕" } },
-  { id: 3, title: "Nuestro escondite", emotion: "alegria", when: "Infancia", hint: "1, 2, 3… ¡escondite inglés! Cuenta hasta 30 sin trampas.", gameKey: "order30", gameWhy: "Contar del 1 al 30 como cuando jugábamos al escondite.", message: "Cuenta dónde os escondíais, quién hacía trampas, el sitio secreto que nadie encontraba…", photo: "" },
-  { id: 4, title: "Peleas de hermanos", emotion: "ira", when: "Siempre", hint: "¿Quién elegía el canal de la tele? Que lo decida el duelo de siempre.", gameKey: "rps", gameWhy: "Piedra, papel o tijera: así resolvíais las disputas.", message: "Recuerda alguna pelea absurda que ahora os da risa, el mando de la tele, el asiento del coche…", photo: "" },
-  { id: 5, title: "Vacaciones en la playa", emotion: "alegria", when: "Verano", hint: "Sol, arena y tesoros que el mar deja en la orilla. Recoge todos los que puedas.", gameKey: "catch", gameWhy: "Atrapar conchas y esquivar medusas, como en la orilla.", message: "El castillo de arena, el helado derretido, la quemadura, el chiringuito…", photo: "", config: { good: "🐚", bad: "🪼", basket: "🪣" } },
-  { id: 6, title: "Nuestra canción", emotion: "alegria", when: "Viajes en coche", hint: "Esa canción que cantábamos a gritos. Repite la melodía nota a nota.", gameKey: "simon", gameWhy: "Simón dice con notas: repite la melodía.", message: "Qué canción era, dónde la cantabais, el estribillo que os inventasteis…", photo: "" },
-  { id: 7, title: "El primer día de cole", emotion: "miedo", when: "Septiembre", hint: "El camino al cole parecía un laberinto gigante. Hoy lo recorres sin miedo.", gameKey: "maze", gameWhy: "Encuentra el camino hasta la puerta del colegio.", message: "La mochila nueva, las lágrimas en la puerta, cómo te acompañé…", photo: "" },
-  { id: 8, title: "Navidades en familia", emotion: "alegria", when: "Diciembre", hint: "Pinta el dibujo oculto siguiendo los números… tiene forma de lo que más importa.", gameKey: "nonogram", gameWhy: "Nonograma que revela un corazón, como el de la familia unida.", message: "El árbol torcido, el regalo repetido, la cena de Nochebuena…", photo: "" },
-  { id: 9, title: "Nuestra mascota", emotion: "alegria", emotion2: "tristeza", when: "Años de compañía", hint: "Siempre se escondía en los sitios más raros. ¡Atrápala cuando asome!", gameKey: "whack", gameWhy: "Cazar a la mascota cuando asoma, como cuando se escapaba.", message: "Cómo llegó a casa, sus travesuras, cómo la echáis de menos o la queréis…", photo: "", config: { emoji: "🐶", hole: "🛋️" } },
-  { id: 10, title: "Tu apodo", emotion: "alegria", when: "Desde pequeña", hint: "Solo yo te llamo así. Adivina la palabra letra a letra.", gameKey: "wordle", gameWhy: "Wordle con el apodo o palabra que solo vosotras usáis.", message: "De dónde viene el apodo, quién lo inventó, por qué se quedó…", photo: "", config: { word: "PEQUE" } },
-  { id: 11, title: "Cumpleaños inolvidable", emotion: "alegria", when: "Tu cumple", hint: "Suma velas, tartas y regalos. ¡Las cuentas no fallan!", gameKey: "math", gameWhy: "Cálculo rápido: velas, años y tartas.", message: "La tarta que se cayó, la sorpresa que casi se chafó, los invitados…", photo: "" },
-  { id: 12, title: "El gran viaje", emotion: "alegria", when: "El viaje juntas", hint: "Esta foto se desordenó en la maleta. Recompón el recuerdo pieza a pieza.", gameKey: "sliding", gameWhy: "Puzzle deslizante hecho con la propia foto del viaje.", message: "El vuelo perdido, el hotel raro, la foto que se repite siempre…", photo: "", config: { usePhoto: true } },
-  { id: 13, title: "Nuestra palabra secreta", emotion: "alegria", when: "Código entre hermanas", hint: "Las letras se mezclaron. Ordénalas para recuperar las palabras que solo nosotras entendemos.", gameKey: "anagram", gameWhy: "Anagramas con palabras de vuestro código secreto.", message: "Qué significaban, cuándo las usabais, la cara de los demás sin entender…", photo: "", config: { words: "HERMANAS:👭 Lo que somos\nSECRETO:🤫 Lo que guardamos\nSIEMPRE:♾️ Hasta cuándo" } },
-  { id: 14, title: "¿Cuánto me conoces?", emotion: "alegria", when: "Hoy", hint: "Un test rápido sobre mí. Si lo apruebas, hay premio.", gameKey: "trivia", gameWhy: "Trivia con preguntas sobre vosotras.", message: "Escribe por qué sabes que te conoce mejor que nadie…", photo: "", config: { questions: "¿Mi comida favorita?|Pizza|Sushi|Paella|Tacos|Pizza\n¿Mi película favorita?|Inside Out|Titanic|Matrix|Coco|Inside Out\n¿Mi mayor miedo?|Arañas|Alturas|Oscuridad|Payasos|Arañas\n¿Mi color favorito?|Azul|Rojo|Verde|Lila|Lila\n¿Dónde nací?|Madrid|Sevilla|Valencia|Bilbao|Madrid" } },
-  { id: 15, title: "El gran susto", emotion: "miedo", when: "Aquella noche", hint: "Aquel día el corazón nos iba a mil. Mide tus reflejos: espera al verde.", gameKey: "reflex", gameWhy: "Test de reflejos: el susto que os dio aquel día.", message: "La tormenta, la película de miedo, el ruido en la noche…", photo: "" },
-  { id: 16, title: "Las fotos de familia", emotion: "alegria", when: "Álbum familiar", hint: "En las fotos de familia siempre hay algo distinto. ¿Lo ves?", gameKey: "diff", gameWhy: "Encuentra las diferencias entre dos 'fotos'.", message: "La foto en la que sales con los ojos cerrados, la pose repetida cada año…", photo: "" },
-  { id: 17, title: "El baile", emotion: "alegria", when: "Aquella fiesta", hint: "Ritmo, ritmo, ritmo. Para justo en el compás.", gameKey: "timing", gameWhy: "Juego de ritmo: para el cursor en el momento exacto.", message: "La coreografía inventada, la boda, el baile en el salón…", photo: "" },
-  { id: 18, title: "La noche que lloramos juntas", emotion: "tristeza", when: "Un día difícil", hint: "Apaga todas las luces. A veces solo hace falta compañía en la oscuridad.", gameKey: "lights", gameWhy: "Lights Out: apagar luces, como quedarse juntas hasta dormir.", message: "El recuerdo triste que compartisteis y cómo os apoyasteis…", photo: "" },
-  { id: 19, title: "Nuestra fecha", emotion: "alegria", when: "Día especial", hint: "Hay un día del año que es solo nuestro. Abre el candado con sus números.", gameKey: "lock", gameWhy: "Candado con la fecha de un día importante.", message: "Qué pasó ese día y por qué lo celebráis…", photo: "", config: { code: "2,4,6", hints: "Día (cifra 1)|Mes (cifra 2)|Último dígito del año" } },
-  { id: 20, title: "Tardes de juegos de mesa", emotion: "ira", emotion2: "alegria", when: "Tardes de lluvia", hint: "Siempre ganabas tú… ¿o hacías trampas? Demuéstralo.", gameKey: "tictac", gameWhy: "Tres en raya, el clásico de las tardes de lluvia.", message: "El Monopoly interminable, la partida que acabó en pelea, el tablero perdido…", photo: "" },
-  { id: 21, title: "Nuestro lugar", emotion: "alegria", when: "Siempre volvemos", hint: "Tres palabras escondidas que describen nuestro rincón favorito.", gameKey: "soup", gameWhy: "Sopa de letras con palabras del sitio especial.", message: "El parque, el banco, la terraza, la cafetería donde todo se arregla…", photo: "" },
-  { id: 22, title: "Los años pasan", emotion: "tristeza", emotion2: "alegria", when: "Crecer", hint: "Todo sigue un patrón. Descubre cómo continúa la serie.", gameKey: "sequence", gameWhy: "Series lógicas: el paso del tiempo también tiene patrón.", message: "Cómo habéis cambiado, lo que se mantiene igual…", photo: "" },
-  { id: 23, title: "La broma pesada", emotion: "alegria", when: "Inocentes", hint: "Entre tantos iguales, siempre había uno distinto… como tu broma.", gameKey: "intruder", gameWhy: "Encuentra el intruso, como la broma que descolocó todo.", message: "La broma que le gastaste, cómo reaccionó, la venganza…", photo: "" },
-  { id: 24, title: "Noches de peli y manta", emotion: "alegria", when: "Sábados", hint: "Memoriza la secuencia de la noche perfecta.", gameKey: "flash", gameWhy: "Memoria flash con los emojis de la noche de pelis.", message: "La peli que repetís siempre, las palomitas quemadas, quién se duerme primero…", photo: "", config: { emojis: "🍿,🎬,🛋️,🧣,🍫,😴,🥤,📺" } },
-  { id: 25, title: "Lo que no soportabas", emotion: "asco", when: "De pequeña", hint: "Ordenar la habitación era tu tortura. Clasifica el caos.", gameKey: "recycle", gameWhy: "Clasificar residuos: ordenar el desastre que odiabas.", message: "La comida que escupías, la habitación desordenada, el jersey que picaba…", photo: "" },
-  { id: 26, title: "Paso a paso", emotion: "miedo", emotion2: "alegria", when: "Tu gran logro", hint: "Los grandes logros se consiguen moviendo una pieza cada vez.", gameKey: "hanoi", gameWhy: "Torres de Hanói: constancia, igual que tu logro.", message: "La graduación, el examen, el primer trabajo… lo orgullosa que estoy.", photo: "" },
-  { id: 27, title: "La feria", emotion: "alegria", when: "Fiestas del pueblo", hint: "La caseta de tiro: nunca ganábamos el peluche. Hoy sí.", gameKey: "targets", gameWhy: "Dianas rápidas como en la tómbola.", message: "El algodón de azúcar, la noria, el peluche gigante…", photo: "" },
-  { id: 28, title: "No leas, siente", emotion: "ira", when: "Discusiones", hint: "A veces lo que dicen y lo que sienten no coincide. Fíjate en el color, no en la palabra.", gameKey: "stroop", gameWhy: "Test Stroop: palabra vs color, como en las discusiones.", message: "Un recuerdo sobre perdonarse y entenderse…", photo: "" },
-  { id: 29, title: "Noches de cartas", emotion: "alegria", when: "Vacaciones", hint: "El 21 era la cifra mágica en la mesa de la cocina.", gameKey: "dice21", gameWhy: "Blackjack con dados, como las partidas con los abuelos.", message: "Las partidas, las apuestas con caramelos, el que siempre perdía…", photo: "" },
-  { id: 30, title: "Nuestra historia", emotion: "alegria", emotion2: "tristeza", when: "Hasta hoy", hint: "Ordena los capítulos de nuestra vida. Tú ya sabes el final.", gameKey: "story", gameWhy: "Ordenar cronológicamente los grandes momentos juntas.", message: "Un resumen de todo lo vivido y lo que viene…", photo: "", config: { events: "Naciste tú\nPrimer verano en la playa\nTu primer día de cole\nEl gran viaje juntas\nHoy, con estas 30 esferas" } },
+  { id: 1, kind: "intro", title: APP_NAME, emotion: "alegria", when: "Missatge urgent", hint: INTRO_TEXT, gameKey: "", gameWhy: "Esfera d'inici: explica la història i les regles.", message: "", photo: "" },
+
+  { id: 2, kind: "game", title: "El dia que vas arribar", emotion: "alegria", when: "El principi de tot", hint: "Tot va començar amb un número: l'any en què la família va créixer.", gameKey: "guess", gameWhy: "Endevinar l'any de naixement.", message: PH, photo: "", config: { secret: 2005, min: 1990, max: 2025, label: "En quin any vas néixer?" } },
+  { id: 3, kind: "game", title: "La casa dels avis", emotion: "alegria", emotion2: "tristesa", when: "Tots els estius", hint: "Un lloc amb olor de cuina i tardes llargues. Troba el que sempre hi havia.", gameKey: "memory", gameWhy: "Parelles de memòria amb els objectes de casa dels avis.", message: PH, photo: "", config: { emojis: "🍪,🧶,📻,🪴,🐓,☕" } },
+  { id: 4, kind: "game", title: "El nostre amagatall", emotion: "alegria", when: "Infància", hint: "1, 2, 3… amagar! Compta fins a 30 sense fer trampes.", gameKey: "order30", gameWhy: "Comptar de l'1 al 30 com quan jugàvem a amagar.", message: PH, photo: "" },
+  { id: 5, kind: "game", title: "Baralles de germanes", emotion: "rabia", when: "Sempre", hint: "Qui triava el canal de la tele? Que ho decideixi el duel de sempre.", gameKey: "rps", gameWhy: "Pedra, paper o tisora: així resolíeu les disputes.", message: PH, photo: "" },
+  { id: 6, kind: "game", title: "Vacances a la platja", emotion: "alegria", when: "Estiu", hint: "Sol, sorra i tresors que el mar deixa a la vora. Recull-ne tants com puguis.", gameKey: "catch", gameWhy: "Atrapar petxines i esquivar meduses.", message: PH, photo: "", config: { good: "🐚", bad: "🪼", basket: "🪣" } },
+  { id: 7, kind: "game", title: "La nostra cançó", emotion: "alegria", when: "Viatges en cotxe", hint: "Aquella cançó que cantàvem a crits. Repeteix la melodia nota a nota.", gameKey: "simon", gameWhy: "Simon diu amb notes: repeteix la melodia.", message: PH, photo: "" },
+  { id: 8, kind: "game", title: "El primer dia d'escola", emotion: "por", when: "Setembre", hint: "El camí a l'escola semblava un laberint gegant. Avui el recorres sense por.", gameKey: "maze", gameWhy: "Troba el camí fins a la porta de l'escola.", message: PH, photo: "" },
+  { id: 9, kind: "game", title: "Nadal en família", emotion: "alegria", when: "Desembre", hint: "Pinta el dibuix ocult seguint els números… té forma del que més importa.", gameKey: "nonogram", gameWhy: "Nonograma que revela un cor.", message: PH, photo: "" },
+
+  { id: 10, kind: "gift", title: "Un regal per a tu", emotion: "alegria", when: "Esfera especial", hint: "Aquesta esfera pesa més que les altres… Sembla que el Minion hi ha amagat alguna cosa que no és un record. Encara.", gameKey: "", gameWhy: "Primer regal: l'iPhone.", message: "Escriu aquí el text del regal: per què te'l mereixes, on és amagat, etc.", photo: "", config: { giftEmoji: "📱", giftName: "Un iPhone nou!" } },
+
+  { id: 11, kind: "game", title: "La nostra mascota", emotion: "alegria", emotion2: "tristesa", when: "Anys de companyia", hint: "Sempre s'amagava als llocs més estranys. Atrapa-la quan tregui el cap!", gameKey: "whack", gameWhy: "Caçar la mascota quan treu el cap.", message: PH, photo: "", config: { emoji: "🐶", hole: "🛋️" } },
+  { id: 12, kind: "game", title: "El teu malnom", emotion: "alegria", when: "Des de petita", hint: "Només jo et dic així. Endevina la paraula lletra a lletra.", gameKey: "wordle", gameWhy: "Wordle amb el malnom.", message: PH, photo: "", config: { word: "PETITA" } },
+  { id: 13, kind: "game", title: "Aniversari inoblidable", emotion: "alegria", when: "El teu aniversari", hint: "Suma espelmes, pastissos i regals. Els comptes no fallen!", gameKey: "math", gameWhy: "Càlcul ràpid: espelmes, anys i pastissos.", message: PH, photo: "" },
+  { id: 14, kind: "game", title: "El gran viatge", emotion: "alegria", when: "El viatge juntes", hint: "Aquesta foto s'ha desordenat a la maleta. Recompon el record peça a peça.", gameKey: "sliding", gameWhy: "Puzle lliscant fet amb la foto del viatge.", message: PH, photo: "", config: { usePhoto: "true" } },
+  { id: 15, kind: "game", title: "La nostra paraula secreta", emotion: "alegria", when: "Codi entre germanes", hint: "Les lletres s'han barrejat. Ordena-les per recuperar les paraules que només nosaltres entenem.", gameKey: "anagram", gameWhy: "Anagrames amb el vostre codi secret.", message: PH, photo: "", config: { words: "GERMANES:👭 El que som\nSECRET:🤫 El que guardem\nSEMPRE:♾️ Fins quan" } },
+  { id: 16, kind: "game", title: "Quant em coneixes?", emotion: "alegria", when: "Avui", hint: "Un test ràpid sobre mi. Si l'aproves, hi ha premi.", gameKey: "trivia", gameWhy: "Trivial amb preguntes sobre vosaltres.", message: PH, photo: "", config: { questions: "El meu menjar preferit?|Pizza|Sushi|Paella|Tacos|Pizza\nLa meva pel·lícula preferida?|Inside Out|Titanic|Matrix|Coco|Inside Out\nLa meva por més gran?|Aranyes|Altures|Foscor|Pallassos|Aranyes\nEl meu color preferit?|Blau|Vermell|Verd|Lila|Lila\nOn vaig néixer?|Barcelona|Girona|Lleida|Tarragona|Barcelona" } },
+  { id: 17, kind: "game", title: "El gran ensurt", emotion: "por", when: "Aquella nit", hint: "Aquell dia el cor ens anava a mil. Mesura els teus reflexos: espera el verd.", gameKey: "reflex", gameWhy: "Test de reflexos.", message: PH, photo: "" },
+  { id: 18, kind: "game", title: "Les fotos de família", emotion: "alegria", when: "Àlbum familiar", hint: "A les fotos de família sempre hi ha alguna cosa diferent. Ho veus?", gameKey: "diff", gameWhy: "Troba les diferències.", message: PH, photo: "" },
+  { id: 19, kind: "game", title: "El ball", emotion: "alegria", when: "Aquella festa", hint: "Ritme, ritme, ritme. Atura't just al compàs.", gameKey: "timing", gameWhy: "Joc de ritme.", message: PH, photo: "" },
+
+  { id: 20, kind: "gift", title: "Fem les maletes!", emotion: "alegria", emotion2: "por", when: "Esfera especial", hint: "Aquesta esfera fa olor de mar, d'aeroport i d'aventura. El Minion no ha pogut encriptar-la del tot…", gameKey: "", gameWhy: "Segon regal: el viatge.", message: "Escriu aquí el text del viatge: destinació, dates, amb qui…", photo: "", config: { giftEmoji: "✈️", giftName: "Un viatge juntes!" } },
+
+  { id: 21, kind: "game", title: "La nit que vam plorar juntes", emotion: "tristesa", when: "Un dia difícil", hint: "Apaga tots els llums. De vegades només cal companyia a les fosques.", gameKey: "lights", gameWhy: "Apagar llums, com quedar-se juntes fins adormir-se.", message: PH, photo: "" },
+  { id: 22, kind: "game", title: "La nostra data", emotion: "alegria", when: "Dia especial", hint: "Hi ha un dia de l'any que és només nostre. Obre el cadenat amb els seus números.", gameKey: "lock", gameWhy: "Cadenat amb la data d'un dia important.", message: PH, photo: "", config: { code: "2,4,6", hints: "Dia (xifra 1)|Mes (xifra 2)|Últim dígit de l'any" } },
+  { id: 23, kind: "game", title: "Tardes de jocs de taula", emotion: "rabia", emotion2: "alegria", when: "Tardes de pluja", hint: "Sempre guanyaves tu… o feies trampes? Demostra-ho.", gameKey: "tictac", gameWhy: "Tres en ratlla.", message: PH, photo: "" },
+  { id: 24, kind: "game", title: "El nostre lloc", emotion: "alegria", when: "Sempre hi tornem", hint: "Tres paraules amagades que descriuen el nostre racó preferit.", gameKey: "soup", gameWhy: "Sopa de lletres.", message: PH, photo: "" },
+  { id: 25, kind: "game", title: "Els anys passen", emotion: "tristesa", emotion2: "alegria", when: "Créixer", hint: "Tot segueix un patró. Descobreix com continua la sèrie.", gameKey: "sequence", gameWhy: "Sèries lògiques.", message: PH, photo: "" },
+  { id: 26, kind: "game", title: "La broma pesada", emotion: "alegria", when: "Innocents", hint: "Entre tants d'iguals, sempre n'hi havia un de diferent… com la teva broma.", gameKey: "intruder", gameWhy: "Troba l'intrús.", message: PH, photo: "" },
+  { id: 27, kind: "game", title: "Nits de peli i manta", emotion: "alegria", when: "Dissabtes", hint: "Memoritza la seqüència de la nit perfecta.", gameKey: "flash", gameWhy: "Memòria flash amb emojis de la nit de pelis.", message: PH, photo: "", config: { emojis: "🍿,🎬,🛋️,🧣,🍫,😴,🥤,📺" } },
+  { id: 28, kind: "game", title: "Pas a pas", emotion: "por", emotion2: "alegria", when: "El teu gran èxit", hint: "Les grans fites s'aconsegueixen movent una peça cada vegada.", gameKey: "hanoi", gameWhy: "Torres de Hanoi: constància.", message: PH, photo: "" },
+  { id: 29, kind: "game", title: "La nostra història", emotion: "alegria", emotion2: "tristesa", when: "Fins avui", hint: "Ordena els capítols de la nostra vida. Tu ja saps el final.", gameKey: "story", gameWhy: "Ordenar cronològicament els grans moments.", message: PH, photo: "", config: { events: "Vas néixer tu\nPrimer estiu a la platja\nEl teu primer dia d'escola\nEl gran viatge juntes\nAvui, amb aquestes 30 esferes" } },
+
+  { id: 30, kind: "video", title: "El nostre vídeo", emotion: "alegria", emotion2: "tristesa", when: "L'última esfera", hint: "Aquesta és l'última esfera. Dins hi ha alguna cosa que hem fet per a tu amb molt d'amor.", gameKey: "", gameWhy: "Vídeo final fet per la família.", message: "Escriu aquí el missatge final que acompanya el vídeo.", photo: "", config: { videoUrl: "", requireAll: "true" } },
 ];
