@@ -3,7 +3,7 @@ name: Publicar en GitHub Pages
 # Se ejecuta cada vez que subes cambios a la rama principal
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   workflow_dispatch: # permite lanzarlo a mano desde la pestaña "Actions"
 
 permissions:
@@ -25,13 +25,41 @@ jobs:
       - name: Preparar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+
+      - name: Comprobar estructura de archivos
+        run: |
+          # Si los archivos quedaron dentro de una subcarpeta (ej. al arrastrar la carpeta a GitHub)
+          if [ ! -f package.json ]; then
+            echo "package.json no está en la raíz. Buscando en subcarpetas..."
+            SUBDIR=$(find . -maxdepth 2 -name package.json -not -path "./node_modules/*" | head -n 1)
+            if [ -n "$SUBDIR" ]; then
+              DIR=$(dirname "$SUBDIR")
+              echo "Encontrado en $DIR. Moviendo archivos a la raíz..."
+              shopt -s dotglob
+              mv "$DIR"/* .
+              rmdir "$DIR" 2>/dev/null || true
+            else
+              echo "ERROR: No se encontró package.json en el repositorio."
+              ls -la
+              exit 1
+            fi
+          fi
+          echo "Archivos listos para compilar:"
+          ls -la
 
       - name: Instalar dependencias
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Compilar la web
         run: npm run build
+
+      - name: Verificar compilación
+        run: |
+          if [ ! -f dist/index.html ]; then
+            echo "ERROR: dist/index.html no fue generado."
+            exit 1
+          fi
 
       - name: Preparar artefacto
         uses: actions/upload-pages-artifact@v3
