@@ -1,10 +1,9 @@
 name: Publicar en GitHub Pages
 
-# Se ejecuta cada vez que subes cambios a la rama principal
 on:
   push:
     branches: [main, master]
-  workflow_dispatch: # permite lanzarlo a mano desde la pestaña "Actions"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -29,7 +28,6 @@ jobs:
 
       - name: Comprobar estructura de archivos
         run: |
-          # Si los archivos quedaron dentro de una subcarpeta (ej. al arrastrar la carpeta a GitHub)
           if [ ! -f package.json ]; then
             echo "package.json no está en la raíz. Buscando en subcarpetas..."
             SUBDIR=$(find . -maxdepth 2 -name package.json -not -path "./node_modules/*" | head -n 1)
