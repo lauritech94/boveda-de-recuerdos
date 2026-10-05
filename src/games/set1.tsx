@@ -477,3 +477,87 @@ export function GameWordle({ onComplete, config }: GameProps) {
     </div>
   );
 }
+
+/* LA CAMPANA DE L'ESCOLA: arriba a la porta abans no soni el timbre */
+/** Mapa de l'escola. 0 = passadís, 1 = paret. Inici a dalt a l'esquerra; la porta és la cantonada de baix a la dreta. */
+const SCHOOL: number[][] = [
+  [0, 1, 1, 0, 0, 1, 1, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 1, 1, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 1, 1, 1, 1],
+  [0, 0, 0, 0, 0, 0, 0, 0],
+  [1, 1, 1, 0, 0, 0, 1, 0],
+];
+export function GameSchool({ onComplete }: GameProps) {
+  const ROW = SCHOOL.length - 1, COL = SCHOOL[0].length - 1; // posició de la porta
+  const [pr, setPr] = useState(0);
+  const [pc, setPc] = useState(0);
+  const [time, setTime] = useState(15);
+  const [phase, setPhase] = useState<"idle" | "play" | "won" | "lost">("idle");
+  const [steps, setSteps] = useState(0);
+
+  useEffect(() => {
+    if (phase !== "play") return;
+    if (time <= 0) { setPhase("lost"); return; } // perdre NO desbloqueja l'esfera
+    const t = setTimeout(() => setTime((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [time, phase]);
+
+  const start = () => { setPr(0); setPc(0); setSteps(0); setTime(15); setPhase("play"); };
+  const tap = (r: number, c: number) => {
+    if (phase !== "play") return;
+    if (Math.abs(r - pr) + Math.abs(c - pc) !== 1) return; // només caselles del costat
+    if (SCHOOL[r][c] === 1) return; // paret
+    const n = steps + 1;
+    setPr(r); setPc(c); setSteps(n);
+    if (r === ROW && c === COL) { setPhase("won"); onComplete(Math.max(100, 600 - n * 20), `${n} passos`); }
+  };
+
+  return (
+    <div>
+      <GameHeader
+        instruction="Toca les caselles del costat per avançar. Arriba a la porta de l'escola 🏫 abans que soni el timbre!"
+        extra={<span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-black text-blue-800">⏱ {time}s · 👣 {steps}</span>}
+      />
+      <div className="relative mx-auto grid w-full max-w-[320px] grid-cols-8 gap-1 rounded-2xl bg-stone-100 p-2 ring-1 ring-stone-200">
+        {SCHOOL.map((row, r) => row.map((cell, c) => {
+          const isPlayer = r === pr && c === pc && phase !== "won";
+          const isGoal = r === ROW && c === COL;
+          const isFloor = cell === 0;
+          return (
+            <button
+              key={`${r}-${c}`}
+              onClick={() => tap(r, c)}
+              disabled={!isFloor || phase !== "play"}
+              style={{ touchAction: "manipulation" }}
+              className={`relative flex aspect-square items-center justify-center rounded-md text-base ${isFloor ? "bg-white" : "bg-stone-700"} ${isGoal ? "ring-2 ring-blue-500" : ""} ${isPlayer ? "ring-2 ring-emerald-500" : ""} ${phase === "play" && isFloor && !isPlayer ? "active:scale-90" : ""}`}
+            >
+              {isPlayer ? "🧒" : isGoal ? "🏫" : ""}
+            </button>
+          );
+        }))}
+      </div>
+      <p className="mt-2 text-center text-[11px] font-semibold text-stone-500">⬛ parets · ⬜ passadissos · 🧒 tu · 🏫 porta</p>
+
+      {phase === "idle" && (
+        <button onClick={start} className="mt-4 w-full rounded-2xl bg-blue-600 py-4 text-lg font-black text-white shadow-md active:scale-[0.98]">
+          Arribar a l'escola! 🏫
+        </button>
+      )}
+      {phase === "won" && (
+        <div className="mt-4">
+          <WinBanner title="Has arribat a temps! 🏫" subtitle={`${steps} passos, abans que sonés el timbre.`} score={`${steps} passos`} onRestart={start} />
+        </div>
+      )}
+      {phase === "lost" && (
+        <div className="mt-4 rounded-2xl border-2 border-red-300 bg-red-50 p-5 text-center">
+          <h3 className="text-xl font-black text-red-800">🔔 Ha sonat el timbre!</h3>
+          <p className="mt-1 text-sm font-bold text-red-700">T'has quedat pel camí. Torna-ho a provar!</p>
+          <button onClick={start} className="mt-3 rounded-xl bg-red-600 px-5 py-2 font-bold text-white">
+            Reintenta-ho
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

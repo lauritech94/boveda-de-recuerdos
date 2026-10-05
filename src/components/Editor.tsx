@@ -213,7 +213,7 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
             <button onClick={onUnlockAll} className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-black hover:bg-white/20"><Unlock className="h-4 w-4" /> Desbloquear todas (para revisar)</button>
           </div>
           <p className="mt-2 text-[11px] font-semibold text-white/40">También puedes reiniciar desde cualquier móvil abriendo: <code className="text-emerald-300">{window.location.origin}{window.location.pathname}?reset=1</code> · Solo bloquea las esferas: no toca fotos ni textos.</p>
-          <p className="mt-1 text-[11px] font-semibold text-amber-200/80">⚠️ Prioridad de datos: memories.ts ← recuerdos.json ← cambios del panel (este navegador). Si cambias memories.ts pero existe recuerdos.json o cambios locales, verás los antiguos.</p>
+          <p className="mt-1 text-[11px] font-semibold text-amber-200/80">⚠️ Prioridad: <b>textos, fotos y títulos</b> → recuerdos.json y panel mandan sobre el código. <b>Qué juego tiene cada esfera</b> → manda el código, salvo que lo cambies aquí (entonces se marca como "elegido aquí").</p>
         </div>
 
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm font-semibold text-white/70">

@@ -536,3 +536,116 @@ export function GameRiddle({ onComplete, config }: GameProps) {
     </div>
   );
 }
+
+/* EL GLOBUS: toca'l per no deixar-lo caure 20 segons */
+export function GameBalloon({ onComplete, config }: GameProps) {
+  const EMO = String(config?.emoji || "🎈");
+  const NEED = 20;
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [phase, setPhase] = useState<"idle" | "play" | "won" | "lost">("idle");
+  const [secs, setSecs] = useState(NEED);
+  const [pos, setPos] = useState({ x: 50, y: 40 });
+  const phaseRef = useRef(phase);
+  const posRef = useRef({ x: 50, y: 40 });
+  const velRef = useRef({ x: 18, y: -40 });
+  phaseRef.current = phase;
+
+  const start = () => {
+    posRef.current = { x: 50, y: 40 };
+    velRef.current = { x: 22, y: -55 };
+    setPos({ x: 50, y: 40 });
+    setSecs(NEED);
+    phaseRef.current = "play";
+    setPhase("play");
+  };
+
+  useEffect(() => {
+    if (phase !== "play") return;
+    if (secs <= 0) {
+      phaseRef.current = "won";
+      setPhase("won");
+      onComplete(500, `${NEED}s`);
+      return;
+    }
+    const t = setTimeout(() => setSecs((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [phase, secs]);
+
+  useEffect(() => {
+    if (phase !== "play") return;
+    let last = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      if (phaseRef.current !== "play") return;
+      const dt = Math.min(0.04, (now - last) / 1000);
+      last = now;
+      velRef.current.y += 160 * dt; // gravetat
+      velRef.current.x *= 0.995;
+      let x = posRef.current.x + velRef.current.x * dt;
+      let y = posRef.current.y + velRef.current.y * dt;
+      if (x < 8) { x = 8; velRef.current.x = Math.abs(velRef.current.x) * 0.6; }
+      if (x > 92) { x = 92; velRef.current.x = -Math.abs(velRef.current.x) * 0.6; }
+      if (y < 6) { y = 6; velRef.current.y = Math.abs(velRef.current.y) * 0.4; }
+      if (y > 92) {
+        phaseRef.current = "lost";
+        setPhase("lost");
+        setPos({ x, y: 92 });
+        return;
+      }
+      posRef.current = { x, y };
+      setPos({ x, y });
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [phase]);
+
+  const boost = () => {
+    if (phaseRef.current !== "play") return;
+    velRef.current.y = -90 - Math.random() * 25;
+    velRef.current.x += (Math.random() - 0.5) * 50;
+  };
+
+  return (
+    <div>
+      <GameHeader
+        instruction={`Toca el globus ${EMO} per no deixar-lo caure. Mantén-lo a l'aire ${NEED} segons!`}
+        extra={<span className="rounded-full bg-pink-100 px-3 py-1 text-xs font-black text-pink-800">⏱ {secs}s</span>}
+      />
+      <div
+        ref={boxRef}
+        onPointerDown={boost}
+        style={{ touchAction: "manipulation" }}
+        className="relative mx-auto h-72 w-full max-w-[340px] overflow-hidden rounded-2xl bg-gradient-to-b from-sky-200 to-sky-50 ring-1 ring-sky-200"
+      >
+        <div className="absolute inset-x-0 bottom-0 h-3 bg-emerald-300/70" />
+        <span
+          className="absolute select-none text-5xl"
+          style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: "translate(-50%, -50%)", filter: "drop-shadow(0 6px 8px rgba(0,0,0,.18))" }}
+        >
+          {EMO}
+        </span>
+        {phase === "idle" && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <button onClick={start} className="rounded-2xl bg-pink-500 px-6 py-3 text-lg font-black text-white shadow-md active:scale-[0.98]">
+              Deixa anar el globus!
+            </button>
+          </div>
+        )}
+      </div>
+      {phase === "play" && <p className="mt-2 text-center text-xs font-bold text-stone-500">Toca el requadre (o el globus) per donar-li un impuls cap amunt</p>}
+      {phase === "won" && (
+        <div className="mt-4">
+          <WinBanner title="No ha caigut ni un cop! 🎈" subtitle={`L'has tingut a l'aire ${NEED} segons.`} score={`${NEED}s`} onRestart={start} />
+        </div>
+      )}
+      {phase === "lost" && (
+        <div className="mt-4 rounded-2xl border-2 border-red-300 bg-red-50 p-5 text-center">
+          <h3 className="text-xl font-black text-red-800">S'ha desinflat… 💥</h3>
+          <p className="mt-1 text-sm font-bold text-red-700">El globus ha tocat terra. Torna-ho a provar!</p>
+          <button onClick={start} className="mt-3 rounded-xl bg-red-600 px-5 py-2 font-bold text-white">Torna-ho a provar</button>
+        </div>
+      )}
+    </div>
+  );
+}

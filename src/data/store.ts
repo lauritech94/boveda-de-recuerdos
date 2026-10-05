@@ -7,23 +7,91 @@ const KEY_PROG = "esferas_progreso_v1";
 export type Progress = Record<number, { label: string; date: string }>;
 export type FinalMemory = typeof FINAL_DEFAULT;
 
-/** Esfera 1: descarta valors d'una versió anterior (quan portava el missatge del Minion)
- *  que, desats al panell o a recuerdos.json, taparien el text nou. La foto i el missatge es conserven. */
+/** Textos per defecte de versions ANTERIORS del codi.
+ *  El panell i el recuerdos.json guarden una còpia de cada esfera; si una còpia conté exactament
+ *  un d'aquests valors, no és una edició vostra sinó una còpia vella: es descarta i es fa servir
+ *  el valor actual de memories.ts. Fotos, missatges i textos personalitzats no es toquen mai.
+ *  ➜ Cada cop que es canvia un valor per defecte a memories.ts, cal afegir aquí el valor antic. */
+type LegacyField = "title" | "when" | "hint" | "gameWhy";
+const LEGACY: Record<number, { fields?: Partial<Record<LegacyField, string[]>>; config?: Record<string, string[]> }> = {
+  1: { fields: { title: ["La Càmera dels Records"], when: ["Missatge urgent"], gameWhy: ["Esfera d'inici: explica la història i les regles."] } },
+  2: { fields: { title: ["El dia que vas arribar"], when: ["El principi de tot"], hint: ["Tot va començar amb un número: l'any en què la família va créixer."], gameWhy: ["Endevinar l'any de naixement."] } },
+  3: { config: { emojis: ["🍪,🧶,📻,🪴,🐓,☕"] } },
+  5: { fields: { hint: ["Qui triava el canal de la tele? Que ho decideixi el duel de sempre."], gameWhy: ["Pedra, paper o tisora: així resolíeu les disputes."] } },
+  6: { config: { bad: ["🪼"] } },
+  8: {
+    fields: {
+      hint: [
+        "El camí a l'escola semblava un laberint gegant. Avui el recorres sense por.",
+        "La campana de l'escola és molt especial: només sona si la pares al moment exacte. Tens cinc intents.",
+      ],
+      gameWhy: ["Troba el camí fins a la porta de l'escola.", "Zona verda: parar la campana de l'escola al moment just."],
+    },
+  },
+  15: {
+    fields: {
+      title: ["La nostra paraula secreta"],
+      when: ["Codi entre germanes", "Reto de lletres"],
+      hint: ["Les lletres s'han barrejat. Ordena-les per recuperar les paraules que només nosaltres entenem."],
+      gameWhy: ["Anagrames amb el vostre codi secret."],
+    },
+    config: { words: ["GERMANES:👭 El que som\nSECRET:🤫 El que guardem\nSEMPRE:♾️ Fins quan"] },
+  },
+  16: { fields: { title: ["Quant em coneixes?"], when: ["Avui"], hint: ["Un test ràpid sobre mi. Si l'aproves, hi ha premi."], gameWhy: ["Trivial amb preguntes sobre vosaltres."] } },
+  19: {
+    fields: {
+      title: ["El ball", "Torre de records", "La pista de ball", "Després de la festa"],
+      when: ["Aquella festa", "Bloc a bloc", "La festa", "L'endemà"],
+      hint: [
+        "Ritme, ritme, ritme. Atura't just al compàs.",
+        "Cada record és un bloc. Apila'ls amb molta punteria perquè la torre no s'ensorri!",
+        "Ballar és com recórrer un camí de passos precisos. Troba el camí a través del laberint per arribar al final de la pista de ball!",
+        "La festa va ser espectacular… però l'endemà tot estava ple de deixalles. Classifica cada cosa al seu contenidor!",
+      ],
+      gameWhy: [
+        "Joc de ritme.",
+        "Apilar blocs: construir la nostra història bloc a bloc.",
+        "Laberint: trobar els passos correctes fins al final de la pista de ball.",
+        "Ordena el caos: reciclar el que va quedar després de la festa.",
+      ],
+    },
+  },
+  22: { fields: { hint: ["Hi ha un dia de l'any que és només nostre. Obre el cadenat amb els seus números."], gameWhy: ["Cadenat amb la data d'un dia important."] } },
+  26: { fields: { hint: ["Entre tants d'iguals, sempre n'hi havia un de diferent… com la teva broma."], gameWhy: ["Troba l'intrús."] } },
+  29: { fields: { title: ["La nostra història"], when: ["Fins avui"], hint: ["Ordena els capítols de la nostra vida. Tu ja saps el final."], gameWhy: ["Ordenar cronològicament els grans moments."] } },
+};
+
 function cleanLegacy(o: Partial<Memory> | undefined): Partial<Memory> | undefined {
-  if (!o || o.id !== 1) return o;
-  const c = { ...o };
-  if (typeof c.hint === "string" && c.hint.includes("Minion molt trapella")) delete c.hint;
-  if (c.title === "La Càmera dels Records") delete c.title;
-  if (c.when === "Missatge urgent") delete c.when;
+  if (!o || typeof o.id !== "number") return o;
+  const c: Partial<Memory> = { ...o };
+  // Esfera 1: el text antic del Minion (amb variants) ara és a la targeta d'inici
+  if (o.id === 1 && typeof c.hint === "string" && c.hint.includes("Minion molt trapella")) delete c.hint;
+  const legacy = LEGACY[o.id];
+  if (!legacy) return c;
+  const fields = legacy.fields || {};
+  (Object.keys(fields) as LegacyField[]).forEach((k) => {
+    const v = c[k];
+    if (typeof v === "string" && (fields[k] || []).includes(v)) delete c[k];
+  });
+  if (legacy.config && c.config) {
+    const cfg: Record<string, any> = { ...c.config };
+    Object.entries(legacy.config).forEach(([k, olds]) => {
+      if (typeof cfg[k] === "string" && olds.includes(cfg[k])) delete cfg[k];
+    });
+    c.config = cfg;
+  }
   return c;
 }
 
-/** Mezcla una lista base de recuerdos con cambios parciales (por id). */
+/** Mezcla una lista base de recuerdos con cambios parciales (por id).
+ *  REGLA: el `gameKey` (qué minijuego tiene cada esfera) lo decide memories.ts.
+ *  Solo se respeta el de la capa guardada si se cambió desde el panel (config.__gameCustom).
+ *  Así un recuerdos.json antiguo nunca bloquea un cambio de juego hecho en el código. */
 export function applyMemoryOverrides(base: Memory[], over: Partial<Memory>[] = []): Memory[] {
   if (!Array.isArray(over) || over.length === 0) return base;
   return base.map((m) => {
-    const o = cleanLegacy(over.find((x) => x && x.id === m.id));
-    if (!o) return m;
+    const o = { ...(cleanLegacy(over.find((x) => x && x.id === m.id)) || {}) };
+    if ((o.config as Record<string, any> | undefined)?.__gameCustom !== "1") delete o.gameKey;
     return { ...m, ...o, config: { ...(m.config || {}), ...(o.config || {}) } };
   });
 }
