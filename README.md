@@ -325,11 +325,34 @@ https://TU-USUARIO.github.io/boveda-de-recuerdos/?bola=30    ← esfera 30
 | Mi hermana no ve las fotos | No publicaste `public/recuerdos.json` → repite el [paso 4.2](#42--publicar-ese-contenido-para-que-lo-vea-tu-hermana-️-importante). |
 | "No se pudo guardar: las fotos ocupan demasiado" | Usa URLs de imagen (`fotos/01.jpg`) en lugar de subir archivos. |
 | GitHub Pages da 404 | En *Settings → Pages* el **Source** debe ser **GitHub Actions**. Revisa que el flujo terminó en verde en la pestaña *Actions*. |
+| `Error: Failed to get ID Token` / `Ensure GITHUB_TOKEN has permission "id-token: write"` en el job **deploy** | Ver sección completa más abajo ⬇️ |
 | La etiqueta NFC no abre nada | Comprueba que grabaste una **URL completa** (con `https://`) y que el NFC está activado. |
 | Quiero reiniciar el progreso | Botón **Reiniciar progreso** al final de la página (no borra fotos ni textos). |
 | El progreso aparece vacío en otro móvil | Es normal: el progreso se guarda en cada dispositivo. Tu hermana debe usar siempre el mismo móvil. |
 
 ---
+
+### 🩹 Error "Failed to get ID Token" al desplegar
+
+Si el job **build** termina en verde pero el job **deploy** falla con algo como:
+
+```
+Error: Failed to get ID Token.
+Error: Ensure GITHUB_TOKEN has permission "id-token: write".
+```
+
+Tu código está bien compilado; el problema es de permisos/infraestructura de GitHub. Revisa esto en orden:
+
+1. **Vuelve a lanzarlo** (lo más habitual): pestaña **Actions** → entra en la ejecución fallida → botón **Re-run all jobs**. Es un fallo de red puntual de los servidores de GitHub en más de la mitad de los casos.
+2. **Revisa `Settings → Pages`**: en **Build and deployment → Source** debe decir **GitHub Actions** (no "Deploy from a branch"). Si estaba mal, cámbialo y vuelve a lanzar el flujo.
+3. **Revisa `Settings → Environments`**: debería haberse creado automáticamente un entorno llamado **github-pages**.
+   - Entra en él y comprueba que **no** tiene activado *Required reviewers* (revisores obligatorios) ni restricciones de rama que bloqueen `main`. Si las hay, desactívalas o apruébalas tú misma cuando el flujo se quede esperando.
+4. **Revisa `Settings → Actions → General`**:
+   - *Actions permissions* → debe permitir ejecutar Actions (no estar deshabilitado).
+   - *Workflow permissions* → con "Read repository contents" es suficiente; los permisos de `id-token` los da el propio archivo `deploy.yml` (ya incluidos).
+5. **¿Es un repositorio dentro de una organización?** Algunas organizaciones bloquean los tokens OIDC por política. Si es tu caso, en `Settings → Actions → General` de la organización revisa que no esté restringido, o usa un repositorio personal.
+
+He reforzado además el archivo `.github/workflows/deploy.yml` del proyecto (permisos explícitos en el job de despliegue y más tiempo de espera), así que un simple **Re-run** debería bastar la próxima vez.
 
 ## 💛 Antes del gran día: lista de comprobación
 
