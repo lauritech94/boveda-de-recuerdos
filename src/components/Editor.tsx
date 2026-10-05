@@ -55,6 +55,16 @@ function MemoryForm({ m, onChange }: { m: Memory; onChange: (m: Memory) => void 
   const nfcUrl = `${window.location.origin}${window.location.pathname}?bola=${m.id}`;
   return (
     <div className="grid gap-4 md:grid-cols-2">
+      {m.kind === "intro" && (
+        <div className="rounded-xl border border-amber-300/40 bg-amber-300/10 p-3 md:col-span-2">
+          <p className="mb-2 text-xs font-black text-amber-200">📷 Foto de la esfera 1 (opcional)</p>
+          <PhotoField value={m.photo} onChange={(v) => set({ photo: v })} label="Fotografía · se muestra debajo del mensaje del Minion" />
+          <div className="mt-3">
+            <label className={labelCls}>Pie de foto (opcional, en catalán)</label>
+            <input value={m.photoCaption || ""} onChange={(e) => set({ photoCaption: e.target.value })} className={inputCls} placeholder="Una frase corta bajo la foto" />
+          </div>
+        </div>
+      )}
       <div className="space-y-3">
         <div><label className={labelCls}>Tipo de esfera</label>
           <select value={m.kind} onChange={(e) => set({ kind: e.target.value as MemoryKind })} className={inputCls}>
@@ -75,7 +85,7 @@ function MemoryForm({ m, onChange }: { m: Memory; onChange: (m: Memory) => void 
         <div><label className={labelCls}>Cuándo / subtítulo (en catalán)</label><input value={m.when} onChange={(e) => set({ when: e.target.value })} className={inputCls} placeholder="Estiu 2012" /></div>
         <div><label className={labelCls}>{m.kind === "intro" ? "Texto del mensaje de inicio" : "Pista antes del reto (sin desvelar el recuerdo)"}</label><textarea value={m.hint} onChange={(e) => set({ hint: e.target.value })} rows={m.kind === "intro" ? 10 : 3} className={inputCls} /></div>
         {m.kind !== "intro" && <div><label className={labelCls}>Mensaje personal (se muestra al desbloquear)</label><textarea value={m.message} onChange={(e) => set({ message: e.target.value })} rows={5} className={inputCls} placeholder="Escriu aquí el teu text…" /></div>}
-        <div><label className={labelCls}>Pie de foto (opcional)</label><input value={m.photoCaption || ""} onChange={(e) => set({ photoCaption: e.target.value })} className={inputCls} /></div>
+        {m.kind !== "intro" && <div><label className={labelCls}>Pie de foto (opcional)</label><input value={m.photoCaption || ""} onChange={(e) => set({ photoCaption: e.target.value })} className={inputCls} /></div>}
       </div>
       <div className="space-y-3">
         {m.kind !== "intro" && <PhotoField value={m.photo} onChange={(v) => set({ photo: v })} />}
@@ -168,7 +178,7 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
           <div className="mt-3 flex flex-wrap gap-2">
             <button onClick={() => { if (confirm("¿Bloquear de nuevo las 30 esferas en este dispositivo? (No borra fotos ni textos)")) onResetProgress(); }} className="inline-flex items-center gap-1.5 rounded-lg bg-red-500 px-3 py-2 text-xs font-black text-white hover:bg-red-600"><RotateCcw className="h-4 w-4" /> Reiniciar progreso (volver a 0)</button>
             <button onClick={onUnlockAll} className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-black hover:bg-white/20"><Unlock className="h-4 w-4" /> Desbloquear todas (para revisar)</button>
-            <button onClick={() => { if (confirm("¿Descartar los cambios hechos en el panel en ESTE navegador y volver a leer memories.ts + recuerdos.json?")) { clearLocalContent(); window.location.reload(); } }} className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-black hover:bg-white/20"><Trash2 className="h-4 w-4" /> Descartar cambios locales del panel</button>
+            <button onClick={() => { if (confirm("¿Descartar los cambios hechos en el panel en ESTE navegador y volver a leer memories.ts + recuerdos.json?\n\nSe descargará antes una copia de seguridad (recuerdos-copia-seguridad.json).")) { exportAll(memories, final, "recuerdos-copia-seguridad.json"); clearLocalContent(); setTimeout(() => window.location.reload(), 700); } }} className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-black hover:bg-white/20"><Trash2 className="h-4 w-4" /> Descartar cambios locales del panel</button>
           </div>
           <p className="mt-2 text-[11px] font-semibold text-white/40">También puedes reiniciar desde cualquier móvil abriendo: <code className="text-emerald-300">{window.location.origin}{window.location.pathname}?reset=1</code> · Para limpiar también los cambios del panel: <code className="text-emerald-300">?neteja=1</code></p>
           <p className="mt-1 text-[11px] font-semibold text-amber-200/80">⚠️ Prioridad de datos: memories.ts ← recuerdos.json ← cambios del panel (este navegador). Si cambias memories.ts pero existe recuerdos.json o cambios locales, verás los antiguos.</p>
@@ -187,16 +197,24 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
 
         <div className="mb-4 overflow-hidden rounded-2xl border border-amber-300/30 bg-gradient-to-br from-amber-300/10 to-fuchsia-500/10">
           <button onClick={() => setShowFinal(!showFinal)} className="flex w-full items-center justify-between px-4 py-3 text-left">
-            <div className="flex items-center gap-3"><span className="text-2xl">🌟</span><div><p className="font-black">Mensaje de la pantalla de inicio al completar las 30</p><p className="text-xs font-semibold text-white/50">{final.title}</p></div></div>
+            <div className="flex items-center gap-3"><span className="text-2xl">🏠</span><div><p className="font-black">Pantalla principal (explicación) y mensaje al completar las 30</p><p className="text-xs font-semibold text-white/50">La URL sin <code>?bola=</code> muestra la explicación</p></div></div>
             {showFinal ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
           </button>
           {showFinal && (
-            <div className="grid gap-3 border-t border-white/10 p-4 md:grid-cols-2">
-              <div className="space-y-3">
-                <div><label className={labelCls}>Título (catalán)</label><input value={final.title} onChange={(e) => onChangeFinal({ ...final, title: e.target.value })} className={inputCls} /></div>
-                <div><label className={labelCls}>Mensaje (catalán)</label><textarea rows={7} value={final.message} onChange={(e) => onChangeFinal({ ...final, message: e.target.value })} className={inputCls} /></div>
+            <div className="space-y-4 border-t border-white/10 p-4">
+              <div>
+                <label className={labelCls}>📖 Texto de explicación (pantalla principal, en catalán)</label>
+                <textarea rows={14} value={final.homeText} onChange={(e) => onChangeFinal({ ...final, homeText: e.target.value })} className={inputCls} />
+                <p className="mt-1 text-[11px] font-semibold text-white/40">Es lo primero que ve tu hermana al abrir el enlace principal. Los saltos de línea se respetan.</p>
               </div>
-              <PhotoField value={final.photo} onChange={(v) => onChangeFinal({ ...final, photo: v })} />
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-3">
+                  <p className="text-xs font-black text-amber-200">🌟 Al completar las 30 (se muestra arriba en la pantalla principal)</p>
+                  <div><label className={labelCls}>Título (catalán)</label><input value={final.title} onChange={(e) => onChangeFinal({ ...final, title: e.target.value })} className={inputCls} /></div>
+                  <div><label className={labelCls}>Mensaje (catalán)</label><textarea rows={7} value={final.message} onChange={(e) => onChangeFinal({ ...final, message: e.target.value })} className={inputCls} /></div>
+                </div>
+                <PhotoField value={final.photo} onChange={(v) => onChangeFinal({ ...final, photo: v })} />
+              </div>
             </div>
           )}
         </div>
