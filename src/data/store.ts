@@ -125,21 +125,47 @@ export function resetProgress() {
 
 /* ---------- Exportar / importar ---------- */
 
+/** Només els camps que difereixen del valor per defecte del codi. */
+function pickDiff<T extends object>(base: T, cur: T, keys: (keyof T)[]): Partial<T> {
+  const out: Partial<T> = {};
+  keys.forEach((k) => {
+    if (JSON.stringify(base[k]) !== JSON.stringify(cur[k])) (out as Record<string, unknown>)[k as string] = cur[k];
+  });
+  return out;
+}
+
+const MEM_KEYS: (keyof Memory)[] = ["kind", "title", "emotion", "emotion2", "when", "hint", "gameKey", "gameWhy", "message", "photo", "photoCaption", "config"];
+const FINAL_KEYS = ["homeText", "title", "message", "photo"] as const;
+
+/** Exporta NOMÉS el que s'ha editat al panell. Així el recuerdos.json no tapa mai
+ *  els valors que venen de memories.ts (emojis, jocs per defecte…). */
 export function exportAll(memories: Memory[], final: FinalMemory, filename = "recuerdos.json") {
-  const blob = new Blob([JSON.stringify({ memories, final }, null, 2)], { type: "application/json" });
+  const diff = memories
+    .map((m) => {
+      const base = DEFAULT_MEMORIES.find((d) => d.id === m.id);
+      if (!base) return m as unknown as Partial<Memory> & { id: number };
+      const norm = (x: Memory) => ({ ...x, config: x.config && Object.keys(x.config).length ? x.config : undefined });
+      const d = pickDiff(norm(base), norm(m), MEM_KEYS);
+      return Object.keys(d).length ? { id: m.id, ...d } : null;
+    })
+    .filter((x): x is Partial<Memory> & { id: number } => x !== null);
+  const finalDiff = pickDiff(FINAL_DEFAULT, final, [...FINAL_KEYS] as unknown as (keyof typeof FINAL_DEFAULT)[]);
+  const payload = { v: 2, memories: diff, final: finalDiff };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = filename;
   a.click();
 }
 
+/** Importa un JSON (nou format parcial o antic format complet) i l'aplica sobre els valors per defecte. */
 export function importAll(file: File): Promise<{ memories: Memory[]; final: FinalMemory }> {
   return new Promise((res, rej) => {
     const r = new FileReader();
     r.onload = () => {
       try {
         const data = JSON.parse(String(r.result));
-        res({ memories: data.memories, final: mergeFinal(data.final || {}) });
+        res({ memories: applyMemoryOverrides(DEFAULT_MEMORIES, data.memories || []), final: mergeFinal(data.final || {}) });
       } catch (e) {
         rej(e);
       }

@@ -6,7 +6,8 @@ Experiencia interactiva (en catalán) inspirada en las esferas de recuerdos de *
 **Esferas especiales:**
 | Esfera | Qué es |
 |---|---|
-| **1** | Mensaje de inicio (la historia del Minion). Se desbloquea sola al abrirla. |
+| **Tarjeta de inicio** | No es una bola. Es el enlace principal (sin `?bola=`): el mensaje del Minion. Se escanea la primera. |
+| **1** | Ya desencriptada, sin juego: «Com que et volem ajudar…» + botón *Revelar el record* → foto y mensaje. |
 | **2-9, 11-19, 21-29** | Minijuego → foto + mensaje |
 | **10** | 🎁 Regalo: el iPhone (toca la caja 3 veces) |
 | **20** | 🎁 Regalo: el viaje |
