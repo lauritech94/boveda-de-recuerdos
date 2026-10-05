@@ -61,6 +61,63 @@ export function GameHeader({ instruction, secs, extra }: { instruction: string; 
   );
 }
 
+/* ---------- Emojis: compatibilitat amb mòbils antics ---------- */
+
+export const EMOJI_FONT = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Twemoji Mozilla",sans-serif';
+/** Emojis antics i compatibles amb qualsevol mòbil (per substituir els que no es poden pintar). */
+export const SAFE_EMOJIS = ["🍎", "🐱", "⭐", "🚗", "🎈", "🌳", "🍕", "⚽", "🎵", "🐶"];
+
+const emojiCache = new Map<string, boolean>();
+
+/** Comprova si aquest dispositiu sap dibuixar l'emoji (si no, surt un quadrat buit o res). */
+export function emojiSupported(e: string): boolean {
+  if (!e || /^[\x00-\x7F]*$/.test(e)) return true; // text normal: sempre es veu
+  const cached = emojiCache.get(e);
+  if (cached !== undefined) return cached;
+  let ok = true;
+  try {
+    const c = document.createElement("canvas");
+    c.width = 40;
+    c.height = 40;
+    const ctx = c.getContext("2d", { willReadFrequently: true });
+    if (ctx) {
+      ctx.textBaseline = "top";
+      ctx.font = `28px ${EMOJI_FONT}`;
+      ctx.fillText(e, 2, 2);
+      const d = ctx.getImageData(0, 0, 40, 40).data;
+      let painted = false;
+      let colored = false;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i + 3] > 0) {
+          painted = true;
+          if (Math.abs(d[i] - d[i + 1]) > 12 || Math.abs(d[i + 1] - d[i + 2]) > 12) { colored = true; break; }
+        }
+      }
+      ok = painted && colored; // un emoji real és de colors; el quadrat buit és negre
+    }
+  } catch {
+    ok = true;
+  }
+  emojiCache.set(e, ok);
+  return ok;
+}
+
+/** Si el dispositiu no sap pintar l'emoji, retorna el de reserva. */
+export function safeEmoji(e: string, fallback: string): string {
+  if (!emojiSupported("🍎")) return e; // la detecció no és fiable en aquest navegador
+  return emojiSupported(e) ? e : fallback;
+}
+
+/** Llista d'emojis sense repetits i que el dispositiu sap pintar. Completa amb emojis segurs si en falta. */
+export function safeEmojiList(list: string[], count: number): string[] {
+  const base = list.slice(0, count);
+  if (!emojiSupported("🍎")) return base;
+  const out: string[] = [];
+  list.forEach((e) => { if (out.length < count && !out.includes(e) && emojiSupported(e)) out.push(e); });
+  for (const s of SAFE_EMOJIS) { if (out.length >= count) break; if (!out.includes(s)) out.push(s); }
+  return out.slice(0, count);
+}
+
 export function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {

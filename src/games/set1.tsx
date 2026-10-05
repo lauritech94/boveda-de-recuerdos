@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { GameProps, GameHeader, WinBanner, useElapsed, shuffle, formatTime } from "./common";
+import { GameProps, GameHeader, WinBanner, useElapsed, shuffle, formatTime, safeEmojiList, EMOJI_FONT } from "./common";
 
 /* ORDRE 1-30 */
 export function GameOrder30({ onComplete }: GameProps) {
@@ -202,7 +202,10 @@ export function GameTargets({ onComplete }: GameProps) {
 /* PARELLES */
 const MEMO_EMOJI = ["🚀", "🎮", "🍕", "🐱", "⚽", "🎧"];
 export function GameMemory({ onComplete, config }: GameProps) {
-  const EMO = useMemo(() => { const list = String(config?.emojis || "").split(",").map((s) => s.trim()).filter(Boolean); return list.length >= 6 ? list.slice(0, 6) : MEMO_EMOJI; }, [config]);
+  const EMO = useMemo(() => {
+    const list = String(config?.emojis || "").split(",").map((s) => s.trim()).filter(Boolean);
+    return safeEmojiList(list.length >= 6 ? list : MEMO_EMOJI, 6);
+  }, [config]);
   const [deck, setDeck] = useState<string[]>(() => shuffle([...EMO, ...EMO]));
   const [open, setOpen] = useState<number[]>([]);
   const [matched, setMatched] = useState<Set<string>>(new Set());
@@ -234,7 +237,14 @@ export function GameMemory({ onComplete, config }: GameProps) {
       {!won ? (
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
           {deck.map((e, i) => (
-            <button key={i} onClick={() => flip(i)} className={`flex aspect-square items-center justify-center rounded-xl text-3xl transition-all active:scale-95 ${isUp(i) ? "bg-white ring-2 ring-emerald-300" : "bg-stone-900 text-transparent hover:bg-stone-800"}`}>{isUp(i) ? e : "?"}</button>
+            <button
+              key={i}
+              onClick={() => flip(i)}
+              style={{ fontFamily: EMOJI_FONT, touchAction: "manipulation" }}
+              className={`flex aspect-square items-center justify-center rounded-xl text-3xl leading-none transition-all active:scale-95 ${isUp(i) ? "bg-white text-stone-900 ring-2 ring-emerald-300" : "bg-stone-900 text-white/30"}`}
+            >
+              {isUp(i) ? e : "?"}
+            </button>
           ))}
         </div>
       ) : (

@@ -123,21 +123,6 @@ export function resetProgress() {
   localStorage.removeItem(KEY_PROG);
 }
 
-/** Esborra els canvis fets amb el panell d'edició en aquest navegador.
- *  Després de cridar-ho, la web torna a llegir memories.ts + recuerdos.json. */
-export function clearLocalContent() {
-  localStorage.removeItem(KEY_MEM);
-  localStorage.removeItem(KEY_FINAL);
-}
-
-export function hasLocalContent(): boolean {
-  try {
-    return !!localStorage.getItem(KEY_MEM);
-  } catch {
-    return false;
-  }
-}
-
 /* ---------- Exportar / importar ---------- */
 
 export function exportAll(memories: Memory[], final: FinalMemory, filename = "recuerdos.json") {

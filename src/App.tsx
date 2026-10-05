@@ -3,7 +3,7 @@ import confetti from "canvas-confetti";
 import { APP_NAME, DEFAULT_MEMORIES, EMOTIONS, EmotionKey, FINAL_DEFAULT, Memory } from "./data/memories";
 import {
   loadMemories, saveMemories, loadFinal, saveFinal, loadProgress, saveProgress, resetProgress,
-  loadPublished, applyMemoryOverrides, loadLocalMemoryOverrides, loadLocalFinalOverride, clearLocalContent, hasLocalContent, exportAll, mergeFinal, Progress,
+  loadPublished, applyMemoryOverrides, loadLocalMemoryOverrides, loadLocalFinalOverride, mergeFinal, Progress,
 } from "./data/store";
 import { Sphere } from "./components/Sphere";
 import { MemoryExperience } from "./components/MemoryExperience";
@@ -38,32 +38,9 @@ export default function App() {
   const updateMemories = (list: Memory[]) => { setMemories(list); saveMemories(list); };
   const updateFinal = (f: typeof FINAL_DEFAULT) => { setFinal(f); saveFinal(f); };
 
-  // Paràmetres de la URL: ?bola=N  ?editar=1  ?reset=1  ?neteja=1
+  // Paràmetres de la URL: ?bola=N  ?editar=1  ?reset=1 (només reinicia el progrés)
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
-    if (p.get("neteja") === "1") {
-      const clean = () => {
-        window.history.replaceState({}, "", window.location.pathname);
-        setTimeout(() => window.location.reload(), 700);
-      };
-      if (hasLocalContent()) {
-        const okGo = window.confirm(
-          "⚠️ Aquest navegador té canvis fets amb el panell d'edició (textos, fotos…).\n\n" +
-            "Si continues, s'esborraran d'aquí i es descarregarà abans una còpia de seguretat (recuerdos-copia-seguretat.json).\n\n" +
-            "Continuar?"
-        );
-        if (!okGo) {
-          window.history.replaceState({}, "", window.location.pathname);
-          return;
-        }
-        exportAll(loadMemories(), loadFinal(), "recuerdos-copia-seguretat.json");
-      }
-      clearLocalContent();
-      resetProgress();
-      setProgress({});
-      clean();
-      return;
-    }
     if (p.get("reset") === "1") {
       resetProgress();
       setProgress({});

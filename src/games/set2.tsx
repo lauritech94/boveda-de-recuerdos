@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { GameProps, GameHeader, WinBanner, useElapsed, shuffle, formatTime } from "./common";
+import { GameProps, GameHeader, WinBanner, useElapsed, shuffle, formatTime, safeEmoji } from "./common";
 
 /* SOPA DE LLETRES */
 const SOUP_WORDS = ["GAT", "PA", "SOL"];
@@ -190,7 +190,7 @@ export function GameSequence({ onComplete }: GameProps) {
 
 /* ATRAPA OBJECTES */
 export function GameCatch({ onComplete, config }: GameProps) {
-  const GOOD = config?.good || "⭐", BAD = config?.bad || "💣", BASKET = config?.basket || "🧺";
+  const GOOD = safeEmoji(config?.good || "⭐", "⭐"), BAD = safeEmoji(config?.bad || "💣", "💣"), BASKET = safeEmoji(config?.basket || "🧺", "🧺");
   const [basket, setBasket] = useState(50);
   const [items, setItems] = useState<{ id: number; x: number; y: number; type: "star" | "bomb" }[]>([]);
   const [score, setScore] = useState(0);

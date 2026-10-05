@@ -3,7 +3,7 @@ import { X, Download, Upload, ImagePlus, ChevronDown, ChevronUp, Printer, Trash2
 import { EMOTIONS, EmotionKey, FINAL_DEFAULT, Memory, MemoryKind } from "../data/memories";
 import { GAME_DEFS, GAME_KEYS } from "../games/registry";
 import { Sphere } from "./Sphere";
-import { exportAll, fileToDataUrl, importAll, clearLocalContent, loadPublished, Progress } from "../data/store";
+import { exportAll, fileToDataUrl, importAll, loadPublished, Progress } from "../data/store";
 
 type Props = {
   memories: Memory[];
@@ -211,9 +211,8 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
           <div className="mt-3 flex flex-wrap gap-2">
             <button onClick={() => { if (confirm("¿Bloquear de nuevo las 30 esferas en este dispositivo? (No borra fotos ni textos)")) onResetProgress(); }} className="inline-flex items-center gap-1.5 rounded-lg bg-red-500 px-3 py-2 text-xs font-black text-white hover:bg-red-600"><RotateCcw className="h-4 w-4" /> Reiniciar progreso (volver a 0)</button>
             <button onClick={onUnlockAll} className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-black hover:bg-white/20"><Unlock className="h-4 w-4" /> Desbloquear todas (para revisar)</button>
-            <button onClick={() => { if (confirm("¿Descartar los cambios hechos en el panel en ESTE navegador y volver a leer memories.ts + recuerdos.json?\n\nSe descargará antes una copia de seguridad (recuerdos-copia-seguridad.json).")) { exportAll(memories, final, "recuerdos-copia-seguridad.json"); clearLocalContent(); setTimeout(() => window.location.reload(), 700); } }} className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-black hover:bg-white/20"><Trash2 className="h-4 w-4" /> Descartar cambios locales del panel</button>
           </div>
-          <p className="mt-2 text-[11px] font-semibold text-white/40">También puedes reiniciar desde cualquier móvil abriendo: <code className="text-emerald-300">{window.location.origin}{window.location.pathname}?reset=1</code> · Para limpiar también los cambios del panel: <code className="text-emerald-300">?neteja=1</code></p>
+          <p className="mt-2 text-[11px] font-semibold text-white/40">También puedes reiniciar desde cualquier móvil abriendo: <code className="text-emerald-300">{window.location.origin}{window.location.pathname}?reset=1</code> · Solo bloquea las esferas: no toca fotos ni textos.</p>
           <p className="mt-1 text-[11px] font-semibold text-amber-200/80">⚠️ Prioridad de datos: memories.ts ← recuerdos.json ← cambios del panel (este navegador). Si cambias memories.ts pero existe recuerdos.json o cambios locales, verás los antiguos.</p>
         </div>
 
