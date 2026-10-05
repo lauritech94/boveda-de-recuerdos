@@ -7,14 +7,37 @@ const KEY_PROG = "esferas_progreso_v1";
 export type Progress = Record<number, { label: string; date: string }>;
 export type FinalMemory = typeof FINAL_DEFAULT;
 
+/** Esfera 1: descarta valors d'una versió anterior (quan portava el missatge del Minion)
+ *  que, desats al panell o a recuerdos.json, taparien el text nou. La foto i el missatge es conserven. */
+function cleanLegacy(o: Partial<Memory> | undefined): Partial<Memory> | undefined {
+  if (!o || o.id !== 1) return o;
+  const c = { ...o };
+  if (typeof c.hint === "string" && c.hint.includes("Minion molt trapella")) delete c.hint;
+  if (c.title === "La Càmera dels Records") delete c.title;
+  if (c.when === "Missatge urgent") delete c.when;
+  return c;
+}
+
 /** Mezcla una lista base de recuerdos con cambios parciales (por id). */
 export function applyMemoryOverrides(base: Memory[], over: Partial<Memory>[] = []): Memory[] {
   if (!Array.isArray(over) || over.length === 0) return base;
   return base.map((m) => {
-    const o = over.find((x) => x && x.id === m.id);
+    const o = cleanLegacy(over.find((x) => x && x.id === m.id));
     if (!o) return m;
     return { ...m, ...o, config: { ...(m.config || {}), ...(o.config || {}) } };
   });
+}
+
+/** Combina el text per defecte amb les capes desades. Descarta el text d'inici antic ("Benvinguda!…"). */
+export function mergeFinal(...parts: Partial<FinalMemory>[]): FinalMemory {
+  const merged: FinalMemory = { ...FINAL_DEFAULT };
+  parts.forEach((p) => {
+    if (!p) return;
+    const c: Partial<FinalMemory> = { ...p };
+    if (typeof c.homeText === "string" && /^Benvinguda!/.test(c.homeText.trim())) delete c.homeText;
+    Object.assign(merged, c);
+  });
+  return merged;
 }
 
 /* ---------- Cambios guardados en ESTE navegador (panel de edición) ---------- */
@@ -41,7 +64,7 @@ export function loadMemories(): Memory[] {
 }
 
 export function loadFinal(): FinalMemory {
-  return { ...FINAL_DEFAULT, ...loadLocalFinalOverride() };
+  return mergeFinal(loadLocalFinalOverride());
 }
 
 export function saveMemories(list: Memory[]) {
@@ -117,11 +140,11 @@ export function hasLocalContent(): boolean {
 
 /* ---------- Exportar / importar ---------- */
 
-export function exportAll(memories: Memory[], final: FinalMemory) {
+export function exportAll(memories: Memory[], final: FinalMemory, filename = "recuerdos.json") {
   const blob = new Blob([JSON.stringify({ memories, final }, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "recuerdos.json";
+  a.download = filename;
   a.click();
 }
 
@@ -131,7 +154,7 @@ export function importAll(file: File): Promise<{ memories: Memory[]; final: Fina
     r.onload = () => {
       try {
         const data = JSON.parse(String(r.result));
-        res({ memories: data.memories, final: { ...FINAL_DEFAULT, ...(data.final || {}) } });
+        res({ memories: data.memories, final: mergeFinal(data.final || {}) });
       } catch (e) {
         rej(e);
       }
