@@ -3,7 +3,7 @@ import confetti from "canvas-confetti";
 import { APP_NAME, DEFAULT_MEMORIES, EMOTIONS, EmotionKey, FINAL_DEFAULT, Memory } from "./data/memories";
 import {
   loadMemories, saveMemories, loadFinal, saveFinal, loadProgress, saveProgress, resetProgress,
-  loadPublished, applyMemoryOverrides, loadLocalMemoryOverrides, loadLocalFinalOverride, clearLocalContent, Progress,
+  loadPublished, applyMemoryOverrides, loadLocalMemoryOverrides, loadLocalFinalOverride, clearLocalContent, hasLocalContent, exportAll, mergeFinal, Progress,
 } from "./data/store";
 import { Sphere } from "./components/Sphere";
 import { MemoryExperience } from "./components/MemoryExperience";
@@ -28,6 +28,7 @@ export default function App() {
   const [editing, setEditing] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [showProgress, setShowProgress] = useState(false);
 
   const unlockedCount = Object.keys(progress).length;
   const allDone = unlockedCount >= 30;
@@ -41,11 +42,26 @@ export default function App() {
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     if (p.get("neteja") === "1") {
+      const clean = () => {
+        window.history.replaceState({}, "", window.location.pathname);
+        setTimeout(() => window.location.reload(), 700);
+      };
+      if (hasLocalContent()) {
+        const okGo = window.confirm(
+          "⚠️ Aquest navegador té canvis fets amb el panell d'edició (textos, fotos…).\n\n" +
+            "Si continues, s'esborraran d'aquí i es descarregarà abans una còpia de seguretat (recuerdos-copia-seguretat.json).\n\n" +
+            "Continuar?"
+        );
+        if (!okGo) {
+          window.history.replaceState({}, "", window.location.pathname);
+          return;
+        }
+        exportAll(loadMemories(), loadFinal(), "recuerdos-copia-seguretat.json");
+      }
       clearLocalContent();
       resetProgress();
       setProgress({});
-      window.history.replaceState({}, "", window.location.pathname);
-      window.location.reload();
+      clean();
       return;
     }
     if (p.get("reset") === "1") {
@@ -67,7 +83,7 @@ export default function App() {
       if (!pub) return;
       const base = applyMemoryOverrides(DEFAULT_MEMORIES, pub.memories);
       setMemories(applyMemoryOverrides(base, loadLocalMemoryOverrides()));
-      setFinal({ ...FINAL_DEFAULT, ...pub.final, ...loadLocalFinalOverride() });
+      setFinal(mergeFinal(pub.final, loadLocalFinalOverride()));
     });
   }, []);
 
@@ -79,6 +95,7 @@ export default function App() {
 
   const goHome = () => {
     setActiveId(null);
+    setShowProgress(true);
     window.history.replaceState({}, "", window.location.pathname);
     window.scrollTo({ top: 0 });
   };
@@ -117,53 +134,64 @@ export default function App() {
       <main className="tarjeta">
         <div className="icono">🔮</div>
         <h1 className="titol">{APP_NAME}</h1>
-        <p className="subtitulo">{unlockedCount === 0 ? "Encara no has desxifrat cap esfera" : allDone ? "Has recuperat tots els records!" : `${unlockedCount} de 30 records recuperats`}</p>
+        <p className="subtitulo">{allDone ? "Has recuperat tots els records!" : unlockedCount === 0 ? "Missatge urgent" : `${unlockedCount} de 30 records recuperats`}</p>
 
-        {/* barra de progrés per emocions */}
-        <div className="flex h-3 w-full overflow-hidden rounded-full bg-stone-100 ring-1 ring-stone-200">
-          {(Object.keys(EMOTIONS) as EmotionKey[]).map((k) => (<div key={k} className="h-full transition-all duration-700" style={{ width: `${(byEmotion[k] / 30) * 100}%`, background: EMOTIONS[k].color }} />))}
-        </div>
-        <div className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1">
-          {(Object.keys(EMOTIONS) as EmotionKey[]).map((k) => (<span key={k} className="inline-flex items-center gap-1 text-[11px] font-bold text-stone-500"><span className="h-2 w-2 rounded-full" style={{ background: EMOTIONS[k].color }} />{EMOTIONS[k].name} {byEmotion[k]}</span>))}
-        </div>
-
-        {allDone ? (
-          <section className="pista mt-5" style={{ borderLeftColor: "#b983ff" }}>
-            <b>🌟 {final.title}</b>{"\n\n"}{final.message}
-          </section>
-        ) : (
-          <section className="pista mt-5">
-            {unlockedCount <= 1
-              ? "Un Minion trapella ha encriptat els teus records.\n\nAcosta el mòbil a cada esfera per desxifrar-la."
-              : "Continua acostant el mòbil a les esferes que encara estan encriptades."}
-          </section>
+        {/* Missatge final (només quan ja ha desxifrat les 30) */}
+        {allDone && (
+          <>
+            <section className="pista mb-4" style={{ borderLeftColor: "#b983ff" }}>
+              <b>🌟 {final.title}</b>{"\n\n"}{final.message}
+            </section>
+            {final.photo && <img src={final.photo} alt="" className="foto-record mb-4" />}
+          </>
         )}
-        {allDone && final.photo && <img src={final.photo} alt="" className="foto-record mt-4" />}
 
-        {/* graella d'esferes */}
-        <div className="mt-6 grid grid-cols-5 gap-2 sm:grid-cols-6">
-          {memories.map((m) => {
-            const done = !!progress[m.id];
-            const special = m.kind !== "game";
-            return (
-              <button
-                key={m.id}
-                onClick={() => {
-                  if (done) openSphere(m.id);
-                  else { setToast(`🔒 Esfera ${pad(m.id)} encriptada. Acosta el mòbil a la bola per desxifrar-la.`); setTimeout(() => setToast(null), 2500); }
-                }}
-                className="flex flex-col items-center gap-1 rounded-xl p-1 transition-all active:scale-95"
-                title={done ? m.title : "Encriptada"}
-              >
-                <Sphere emotion={m.emotion} emotion2={m.emotion2} size={56} locked={!done} photo={done ? m.photo : undefined} number={m.id} />
-                <span className={`text-[9px] font-bold leading-tight ${done ? "text-stone-700" : "text-stone-400"}`}>{done ? (special ? (m.kind === "intro" ? "Inici" : m.kind === "gift" ? "🎁" : "🎬") : "✓") : special && m.kind !== "intro" ? "★" : "?"}</span>
-              </button>
-            );
-          })}
-        </div>
+        {/* EXPLICACIÓ: aquesta és la pantalla principal */}
+        <section className="pista">{final.homeText}</section>
 
-        <div className="final">{allDone ? "💛 Gràcies per recuperar-los tots." : "🔍 Busca la següent esfera."}</div>
-        <p className="mt-4 text-[11px] font-semibold text-stone-400">Les esferes grises encara estan encriptades. Les daurades ★ són especials.</p>
+        <div className="final">{allDone ? "💛 Gràcies per recuperar-los tots." : "🔍 Busca la primera esfera per a començar l'aventura."}</div>
+
+        {/* Progrés: només apareix quan ja ha desxifrat alguna esfera */}
+        {unlockedCount > 0 && (
+          <div className="mt-6 border-t border-stone-100 pt-4">
+            <button onClick={() => setShowProgress((v) => !v)} className="boto secundari" style={{ marginTop: 0 }}>
+              {showProgress ? "Amagar el meu progrés ▲" : `📖 Veure el meu progrés (${unlockedCount}/30) ▼`}
+            </button>
+
+            {showProgress && (
+              <div className="animate-pop-in mt-4">
+                <div className="flex h-3 w-full overflow-hidden rounded-full bg-stone-100 ring-1 ring-stone-200">
+                  {(Object.keys(EMOTIONS) as EmotionKey[]).map((k) => (<div key={k} className="h-full transition-all duration-700" style={{ width: `${(byEmotion[k] / 30) * 100}%`, background: EMOTIONS[k].color }} />))}
+                </div>
+                <div className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1">
+                  {(Object.keys(EMOTIONS) as EmotionKey[]).map((k) => (<span key={k} className="inline-flex items-center gap-1 text-[11px] font-bold text-stone-500"><span className="h-2 w-2 rounded-full" style={{ background: EMOTIONS[k].color }} />{EMOTIONS[k].name} {byEmotion[k]}</span>))}
+                </div>
+
+                <div className="mt-4 grid grid-cols-5 gap-2 sm:grid-cols-6">
+                  {memories.map((m) => {
+                    const done = !!progress[m.id];
+                    const special = m.kind !== "game";
+                    return (
+                      <button
+                        key={m.id}
+                        onClick={() => {
+                          if (done) openSphere(m.id);
+                          else { setToast(`🔒 Esfera ${pad(m.id)} encriptada. Acosta el mòbil a la bola per desxifrar-la.`); setTimeout(() => setToast(null), 2500); }
+                        }}
+                        className="flex flex-col items-center gap-1 rounded-xl p-1 transition-all active:scale-95"
+                        title={done ? m.title : "Encriptada"}
+                      >
+                        <Sphere emotion={m.emotion} emotion2={m.emotion2} size={56} locked={!done} photo={done ? m.photo : undefined} number={m.id} />
+                        <span className={`text-[9px] font-bold leading-tight ${done ? "text-stone-700" : "text-stone-400"}`}>{done ? (special ? (m.kind === "intro" ? "Inici" : m.kind === "gift" ? "🎁" : "🎬") : "✓") : special && m.kind !== "intro" ? "★" : "?"}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-3 text-[11px] font-semibold text-stone-400">Les esferes grises encara estan encriptades. Les ★ són especials.</p>
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {toast && (
