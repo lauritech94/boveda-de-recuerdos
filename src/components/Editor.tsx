@@ -224,6 +224,9 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
             <li>Pulsa <b>Exportar recuerdos.json</b> y guarda el archivo como <code className="text-emerald-300">public/recuerdos.json</code> en el proyecto → sube a GitHub.</li>
             <li>Graba en cada NFC la URL de su esfera (<code className="text-emerald-300">?bola=N</code>).</li>
           </ol>
+          <p className="mt-2 rounded-lg bg-amber-300/10 px-3 py-2 text-xs font-semibold text-amber-100">
+            💡 <b>Tus textos y fotos siempre mandan.</b> Si en el código se cambia el texto por defecto de una esfera que tú no has tocado, verás el nuevo. Si tú lo habías reescrito, se respeta el tuyo.
+          </p>
           <p className="mt-2 text-xs text-white/40">Esferas listas: {memories.filter(ready).length}/30</p>
         </div>
 
