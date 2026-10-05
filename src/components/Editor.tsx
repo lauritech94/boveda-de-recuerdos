@@ -1,9 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X, Download, Upload, ImagePlus, ChevronDown, ChevronUp, Printer, Trash2, Link2, Save, RotateCcw, Unlock, ExternalLink } from "lucide-react";
 import { EMOTIONS, EmotionKey, FINAL_DEFAULT, Memory, MemoryKind } from "../data/memories";
 import { GAME_DEFS, GAME_KEYS } from "../games/registry";
 import { Sphere } from "./Sphere";
-import { exportAll, fileToDataUrl, importAll, clearLocalContent, Progress } from "../data/store";
+import { exportAll, fileToDataUrl, importAll, clearLocalContent, loadPublished, Progress } from "../data/store";
 
 type Props = {
   memories: Memory[];
@@ -19,7 +19,7 @@ type Props = {
 
 const inputCls = "w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm font-semibold text-white placeholder:text-white/30 outline-none focus:border-amber-300/60 focus:bg-white/10";
 const labelCls = "mb-1 block text-[11px] font-black uppercase tracking-wider text-white/50";
-const KIND_LABEL: Record<MemoryKind, string> = { intro: "📜 Mensaje de inicio (sin juego)", game: "🧩 Minijuego + recuerdo", gift: "🎁 Regalo", video: "🎬 Vídeo final" };
+const KIND_LABEL: Record<MemoryKind, string> = { intro: "✨ Primera esfera (ya desencriptada, sin juego)", game: "🧩 Minijuego + recuerdo", gift: "🎁 Regalo", video: "🎬 Vídeo final" };
 
 function PhotoField({ value, onChange, label = "Fotografía" }: { value: string; onChange: (v: string) => void; label?: string }) {
   const ref = useRef<HTMLInputElement>(null);
@@ -56,13 +56,8 @@ function MemoryForm({ m, onChange }: { m: Memory; onChange: (m: Memory) => void 
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {m.kind === "intro" && (
-        <div className="rounded-xl border border-amber-300/40 bg-amber-300/10 p-3 md:col-span-2">
-          <p className="mb-2 text-xs font-black text-amber-200">📷 Foto de la esfera 1 (opcional)</p>
-          <PhotoField value={m.photo} onChange={(v) => set({ photo: v })} label="Fotografía · se muestra debajo del mensaje del Minion" />
-          <div className="mt-3">
-            <label className={labelCls}>Pie de foto (opcional, en catalán)</label>
-            <input value={m.photoCaption || ""} onChange={(e) => set({ photoCaption: e.target.value })} className={inputCls} placeholder="Una frase corta bajo la foto" />
-          </div>
+        <div className="rounded-xl border border-amber-300/40 bg-amber-300/10 p-3 text-xs font-semibold text-amber-100 md:col-span-2">
+          ✨ <b>Esfera 1: ya desencriptada, sin juego.</b> Tu hermana ve el texto de «Pista» y pulsa el botón <b>«Revelar el record»</b>: entonces aparecen la <b>foto</b> y el <b>mensaje</b>, igual que en las demás esferas. El mensaje del Minion va en la <b>tarjeta de inicio</b> (bloque 🏠 de arriba del panel), no aquí.
         </div>
       )}
       <div className="space-y-3">
@@ -83,12 +78,12 @@ function MemoryForm({ m, onChange }: { m: Memory; onChange: (m: Memory) => void 
             </select></div>
         </div>
         <div><label className={labelCls}>Cuándo / subtítulo (en catalán)</label><input value={m.when} onChange={(e) => set({ when: e.target.value })} className={inputCls} placeholder="Estiu 2012" /></div>
-        <div><label className={labelCls}>{m.kind === "intro" ? "Texto del mensaje de inicio" : "Pista antes del reto (sin desvelar el recuerdo)"}</label><textarea value={m.hint} onChange={(e) => set({ hint: e.target.value })} rows={m.kind === "intro" ? 10 : 3} className={inputCls} /></div>
-        {m.kind !== "intro" && <div><label className={labelCls}>Mensaje personal (se muestra al desbloquear)</label><textarea value={m.message} onChange={(e) => set({ message: e.target.value })} rows={5} className={inputCls} placeholder="Escriu aquí el teu text…" /></div>}
-        {m.kind !== "intro" && <div><label className={labelCls}>Pie de foto (opcional)</label><input value={m.photoCaption || ""} onChange={(e) => set({ photoCaption: e.target.value })} className={inputCls} /></div>}
+        <div><label className={labelCls}>{m.kind === "intro" ? "Texto antes del botón (esfera ya desencriptada)" : "Pista antes del reto (sin desvelar el recuerdo)"}</label><textarea value={m.hint} onChange={(e) => set({ hint: e.target.value })} rows={3} className={inputCls} /></div>
+        <div><label className={labelCls}>Mensaje personal (se muestra al desbloquear)</label><textarea value={m.message} onChange={(e) => set({ message: e.target.value })} rows={5} className={inputCls} placeholder="Escriu aquí el teu text…" /></div>
+        <div><label className={labelCls}>Pie de foto (opcional)</label><input value={m.photoCaption || ""} onChange={(e) => set({ photoCaption: e.target.value })} className={inputCls} /></div>
       </div>
       <div className="space-y-3">
-        {m.kind !== "intro" && <PhotoField value={m.photo} onChange={(v) => set({ photo: v })} />}
+        <PhotoField value={m.photo} onChange={(v) => set({ photo: v })} />
 
         {m.kind === "game" && (
           <>
@@ -150,7 +145,24 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
   const [showFinal, setShowFinal] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
   const unlockedCount = Object.keys(progress).length;
-  const ready = (m: Memory) => m.kind === "intro" || (!!m.photo && !m.message.includes("…") && !m.message.startsWith("Escriu"));
+
+  // Fotos publicades a public/recuerdos.json (per detectar les que només existeixen en aquest navegador)
+  const [pubPhotos, setPubPhotos] = useState<Record<number, string> | null>(null);
+  const [pubFinalPhoto, setPubFinalPhoto] = useState<string | null>(null);
+  useEffect(() => {
+    loadPublished().then((pub) => {
+      const map: Record<number, string> = {};
+      (pub?.memories || []).forEach((x) => { if (x && typeof x.id === "number") map[x.id] = x.photo || ""; });
+      setPubPhotos(map);
+      setPubFinalPhoto(pub?.final?.photo || "");
+    });
+  }, []);
+  const unpublished = (m: Memory) => !!m.photo && pubPhotos !== null && pubPhotos[m.id] !== m.photo;
+  const unpublishedIds = memories.filter(unpublished).map((m) => m.id);
+  const finalUnpublished = !!final.photo && pubFinalPhoto !== null && pubFinalPhoto !== final.photo;
+  const totalUnpublished = unpublishedIds.length + (finalUnpublished ? 1 : 0);
+
+  const ready = (m: Memory) => !!m.photo && !m.message.includes("…") && !m.message.startsWith("Escriu");
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-[#0b0a1f] text-white">
@@ -171,6 +183,27 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
       </div>
 
       <div className="mx-auto max-w-5xl px-4 py-5">
+        {/* AVÍS: fotos sense publicar */}
+        {totalUnpublished > 0 && (
+          <div className="mb-4 rounded-2xl border-2 border-amber-300 bg-amber-300/15 p-4">
+            <p className="font-black text-amber-200">⚠️ Tienes {totalUnpublished} {totalUnpublished === 1 ? "foto" : "fotos"} que solo existe{totalUnpublished === 1 ? "" : "n"} en este navegador</p>
+            <p className="mt-1 text-xs font-semibold text-white/70">
+              {unpublishedIds.length > 0 && <>Esferas: <b className="text-amber-100">{unpublishedIds.map((i) => `#${String(i).padStart(2, "0")}`).join(", ")}</b>{finalUnpublished ? " y la foto del mensaje final" : ""}. </>}
+              {unpublishedIds.length === 0 && finalUnpublished && <>Foto del mensaje final. </>}
+              <b>Tu hermana NO las verá</b> (ni tú desde otro móvil u otro navegador) hasta que las publiques.
+            </p>
+            <ol className="mt-2 list-decimal space-y-0.5 pl-5 text-xs font-semibold text-white/70">
+              <li>Pulsa el botón de abajo para descargar <code className="text-emerald-300">recuerdos.json</code>.</li>
+              <li>En GitHub, entra en la carpeta <code className="text-emerald-300">public</code> → <b>Add file → Upload files</b> y sube ese archivo (sustituye al anterior).</li>
+              <li>Espera a que <b>Actions</b> salga en verde y haz un refresco fuerte (Ctrl+F5).</li>
+            </ol>
+            <button onClick={() => exportAll(memories, final)} className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-300 px-3 py-2 text-xs font-black text-stone-900 hover:bg-amber-200"><Download className="h-4 w-4" /> Descargar recuerdos.json ahora</button>
+          </div>
+        )}
+        {totalUnpublished === 0 && pubPhotos !== null && memories.some((m) => !!m.photo) && (
+          <div className="mb-4 rounded-2xl border border-emerald-300/30 bg-emerald-400/10 px-4 py-2 text-xs font-bold text-emerald-200">✅ Todas las fotos de este panel ya están en <code>recuerdos.json</code> publicado.</div>
+        )}
+
         {/* ZONA DE PRUEBAS */}
         <div className="mb-4 rounded-2xl border border-red-300/30 bg-red-400/10 p-4">
           <p className="font-black text-red-200">🧪 Zona de pruebas · progreso en este dispositivo: {unlockedCount}/30</p>
@@ -188,7 +221,7 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
           <p className="font-black text-white">Cómo usarlo</p>
           <ol className="mt-1 list-decimal space-y-0.5 pl-5">
             <li>Abre cada esfera, sube la <b className="text-amber-200">foto</b> y escribe el <b className="text-amber-200">mensaje en catalán</b>.</li>
-            <li>Esferas especiales: <b>1</b> mensaje de inicio · <b>10</b> regalo iPhone · <b>20</b> regalo viaje · <b>30</b> vídeo.</li>
+            <li><b>Tarjeta de inicio</b> (enlace sin <code>?bola=</code>) = mensaje del Minion. Después, esfera <b>1</b> = ya desencriptada, solo botón + foto · <b>10</b> regalo iPhone · <b>20</b> regalo viaje · <b>30</b> vídeo.</li>
             <li>Pulsa <b>Exportar recuerdos.json</b> y guarda el archivo como <code className="text-emerald-300">public/recuerdos.json</code> en el proyecto → sube a GitHub.</li>
             <li>Graba en cada NFC la URL de su esfera (<code className="text-emerald-300">?bola=N</code>).</li>
           </ol>
@@ -197,15 +230,17 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
 
         <div className="mb-4 overflow-hidden rounded-2xl border border-amber-300/30 bg-gradient-to-br from-amber-300/10 to-fuchsia-500/10">
           <button onClick={() => setShowFinal(!showFinal)} className="flex w-full items-center justify-between px-4 py-3 text-left">
-            <div className="flex items-center gap-3"><span className="text-2xl">🏠</span><div><p className="font-black">Pantalla principal (explicación) y mensaje al completar las 30</p><p className="text-xs font-semibold text-white/50">La URL sin <code>?bola=</code> muestra la explicación</p></div></div>
+            <div className="flex items-center gap-3"><span className="text-2xl">🏠</span><div><p className="font-black">🃏 Tarjeta de inicio (el mensaje del Minion) y mensaje al completar las 30</p><p className="text-xs font-semibold text-white/50">Es el enlace principal, sin <code>?bola=</code>. No es ninguna esfera.</p></div></div>
             {showFinal ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
           </button>
           {showFinal && (
             <div className="space-y-4 border-t border-white/10 p-4">
               <div>
-                <label className={labelCls}>📖 Texto de explicación (pantalla principal, en catalán)</label>
+                <label className={labelCls}>📖 Texto de la tarjeta de inicio (en catalán)</label>
                 <textarea rows={14} value={final.homeText} onChange={(e) => onChangeFinal({ ...final, homeText: e.target.value })} className={inputCls} />
-                <p className="mt-1 text-[11px] font-semibold text-white/40">Es lo primero que ve tu hermana al abrir el enlace principal. Los saltos de línea se respetan.</p>
+                <p className="mt-1 text-[11px] font-semibold text-white/40">Es lo primero que ve tu hermana: la tarjeta que escanea ANTES de las esferas. Los saltos de línea se respetan.</p>
+                <p className="mt-2 text-[11px] font-black uppercase tracking-wider text-white/50">URL para la tarjeta de inicio (NFC / QR)</p>
+                <code className="block break-all text-xs font-bold text-emerald-300">{window.location.origin}{window.location.pathname}</code>
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-3">
@@ -232,6 +267,7 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
                     <p className="truncate text-xs font-semibold text-white/50">{KIND_LABEL[m.kind]}{m.kind === "game" ? ` · ${GAME_DEFS[m.gameKey]?.name}` : ""} · {m.when}</p>
                   </div>
                   <span className={`hidden rounded-full px-2 py-0.5 text-[10px] font-black sm:inline ${ok ? "bg-emerald-400/20 text-emerald-300" : "bg-white/10 text-white/50"}`}>{ok ? "Lista" : m.photo ? "Falta texto" : "Falta foto"}</span>
+                  {unpublished(m) && <span className="rounded-full bg-amber-300/25 px-2 py-0.5 text-[10px] font-black text-amber-200">⚠️ foto sin publicar</span>}
                   {isOpen ? <ChevronUp className="h-5 w-5 text-white/50" /> : <ChevronDown className="h-5 w-5 text-white/50" />}
                 </button>
                 {isOpen && <div className="border-t border-white/10 p-4"><MemoryForm m={m} onChange={(nm) => onChange(memories.map((x) => (x.id === nm.id ? nm : x)))} /></div>}
