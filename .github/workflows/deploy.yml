@@ -57,7 +57,7 @@ jobs:
                    src/components/Sphere.tsx src/components/Editor.tsx \
                    src/components/MemoryExperience.tsx src/components/PrintSheets.tsx \
                    src/games/common.tsx src/games/registry.tsx \
-                   src/games/set1.tsx src/games/set2.tsx src/games/set3.tsx; do
+                   src/games/set1.tsx src/games/set2.tsx src/games/set3.tsx src/games/set4.tsx; do
             if [ ! -f "$f" ]; then
               echo "::error::FALTA EL ARCHIVO: $f"
               FALTAN=1
