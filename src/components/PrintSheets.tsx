@@ -19,6 +19,16 @@ export function PrintSheets({ memories, onClose }: { memories: Memory[]; onClose
       </div>
       <div className="mx-auto max-w-4xl p-4 print:max-w-none print:p-0">
         <div className="grid gap-3 sm:grid-cols-2 print:grid-cols-2">
+          <div className="break-inside-avoid rounded-2xl border-2 border-dashed border-stone-800 p-3 sm:col-span-2 print:col-span-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-stone-500">🃏 Tarjeta de inicio · NO es una bola · se escanea la primera</p>
+            <p className="mt-1 text-base font-black leading-tight">Mensaje del Minion (enlace principal)</p>
+            <p className="mt-1 text-[11px] font-semibold text-stone-600">Explica la historia. Después ella busca la esfera 1.</p>
+            <div className="mt-2 rounded-lg bg-stone-100 px-2 py-1.5">
+              <p className="text-[9px] font-black uppercase tracking-widest text-stone-400">Grabar en NFC / QR de la tarjeta</p>
+              <p className="break-all font-mono text-[11px] font-bold">{base}</p>
+            </div>
+            <div className="mt-2 flex gap-3 text-[10px] font-bold text-stone-400"><span>☐ NFC/QR grabado</span><span>☐ Tarjeta impresa</span></div>
+          </div>
           {memories.map((m) => {
             const emo = EMOTIONS[m.emotion];
             const def = GAME_DEFS[m.gameKey];
@@ -34,7 +44,7 @@ export function PrintSheets({ memories, onClose }: { memories: Memory[]; onClose
                   {m.photo ? <img src={m.photo} alt="" className="h-12 w-12 rounded-lg object-cover" /> : <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-dashed border-stone-300 text-[9px] font-bold text-stone-400">FOTO</div>}
                 </div>
                 <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-[11px] font-semibold text-stone-700">
-                  <span className="font-black text-stone-400">Tipo</span><span>{m.kind === "intro" ? "📜 Mensaje de inicio" : m.kind === "gift" ? `🎁 Regalo: ${m.config?.giftName || ""}` : m.kind === "video" ? "🎬 Vídeo final" : `🧩 ${def?.name} — ${def?.short} (${def?.time})`}</span>
+                  <span className="font-black text-stone-400">Tipo</span><span>{m.kind === "intro" ? "✨ Primera esfera (ya desencriptada, sin juego)" : m.kind === "gift" ? `🎁 Regalo: ${m.config?.giftName || ""}` : m.kind === "video" ? "🎬 Vídeo final" : `🧩 ${def?.name} — ${def?.short} (${def?.time})`}</span>
                   <span className="font-black text-stone-400">Vínculo</span><span>{m.gameWhy}</span>
                   <span className="font-black text-stone-400">Pista</span><span className="line-clamp-3 italic">“{m.hint}”</span>
                   <span className="font-black text-stone-400">Texto</span><span className="line-clamp-3">{m.message}</span>
