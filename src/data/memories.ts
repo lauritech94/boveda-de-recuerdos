@@ -27,14 +27,8 @@ export type Memory = {
 
 export const APP_NAME = "La Càmera dels Records";
 
-export const FINAL_DEFAULT = {
-  title: "Has recuperat tots els records",
-  message:
-    "El Minion ja no pot fer-hi res: les 30 esferes tornen a brillar. Però el record més important no cap en cap esfera: ets tu, i tot el que encara ens queda per viure juntes. T'estimo.",
-  photo: "",
-};
-
-export const INTRO_TEXT = `Aquesta nit, un Minion molt trapella ha volgut robar-te els teus records.
+/** Targeta d'inici (l'enllaç principal, sense ?bola=). No és cap esfera. Editable des del panell. */
+export const HOME_TEXT_DEFAULT = `Aquesta nit, un Minion molt trapella ha volgut robar-te els teus records.
 
 Per sort hem aconseguit recuperar-los abans que se'ls emportés.
 
@@ -48,16 +42,25 @@ Ningú sap què conté cada esfera.
 
 Ho hauràs de descobrir tu.
 
-✨
+✨`;
 
-Com que et volem ajudar, aquesta primera esfera ja ha estat desxifrada.
+export const FINAL_DEFAULT = {
+  homeText: HOME_TEXT_DEFAULT,
+  title: "Has recuperat tots els records",
+  message:
+    "El Minion ja no pot fer-hi res: les 30 esferes tornen a brillar. Però el record més important no cap en cap esfera: ets tu, i tot el que encara ens queda per viure juntes. T'estimo.",
+  photo: "",
+};
+
+/** Text de l'esfera 1 (abans del botó per revelar el record). */
+export const FIRST_SPHERE_TEXT = `Com que et volem ajudar, aquesta primera esfera ja ha estat desxifrada.
 
 Les següents depenen de tu.`;
 
 const PH = "Escriu aquí el teu text per a aquest record…";
 
 export const DEFAULT_MEMORIES: Memory[] = [
-  { id: 1, kind: "intro", title: APP_NAME, emotion: "alegria", when: "Missatge urgent", hint: INTRO_TEXT, gameKey: "", gameWhy: "Esfera d'inici: explica la història i les regles.", message: "", photo: "" },
+  { id: 1, kind: "intro", title: "El primer record", emotion: "alegria", when: "Primera esfera", hint: FIRST_SPHERE_TEXT, gameKey: "", gameWhy: "Primera esfera: ja desxifrada, sense joc. Ella només prem el botó per revelar el record.", message: PH, photo: "" },
 
   { id: 2, kind: "game", title: "Plomes", emotion: "alegria", when: "Pensa-hi bé", hint: "Pensa-hi bé abans de respondre…", gameKey: "riddle", gameWhy: "Endevinalla: desxifra la connexió abans de continuar.", message: PH, photo: "", config: { question: "🪶 Un cap indi.\n\n🦜 Jack.\n\nQuè tenen en comú?", answer: "plomes,plumes,ploma,pluma" } },
   { id: 3, kind: "game", title: "La casa dels avis", emotion: "alegria", emotion2: "tristesa", when: "Tots els estius", hint: "Un lloc amb olor de cuina i tardes llargues. Troba el que sempre hi havia.", gameKey: "memory", gameWhy: "Parelles de memòria amb els objectes de casa dels avis.", message: PH, photo: "", config: { emojis: "🍪,🧶,📻,🪴,🐓,☕" } },
