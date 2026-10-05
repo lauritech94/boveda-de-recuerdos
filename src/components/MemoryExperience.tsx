@@ -39,9 +39,6 @@ export function MemoryExperience({ memory: m, unlocked, unlockedCount, othersUnl
 
   useEffect(() => { setPhase(unlocked ? "reveal" : "intro"); setGameDone(false); setGiftTaps(0); }, [m.id]);
 
-  // L'esfera 1 (missatge) es desbloqueja només en obrir-la
-  useEffect(() => { if (m.kind === "intro" && !unlocked) onUnlock("llegit"); }, [m.id]);
-
   const celebrate = (big = false) => {
     confetti({ particleCount: big ? 180 : 90, spread: big ? 110 : 70, origin: { y: 0.6 }, colors: [emo.color, "#ffffff", m.emotion2 ? EMOTIONS[m.emotion2].color : "#ff9f43"] });
   };
@@ -55,16 +52,16 @@ export function MemoryExperience({ memory: m, unlocked, unlockedCount, othersUnl
     </div>
   );
 
-  /* ---------- ESFERA 1: MISSATGE ---------- */
-  if (m.kind === "intro") {
+  /* ---------- ESFERA 1: ja desxifrada, sense joc. Un botó per revelar el record ---------- */
+  if (m.kind === "intro" && phase === "intro") {
     return (
       <main className="tarjeta animate-pop-in">
-        <div className="icono">🔮</div>
-        <h1 className="titol">{m.title}</h1>
-        <p className="subtitulo">{m.when}</p>
+        {header}
+        <div className="mx-auto flex justify-center"><Sphere emotion={m.emotion} emotion2={m.emotion2} size={120} pulse /></div>
+        <h1 className="titol mt-3">Esfera desxifrada ✨</h1>
+        <p className="subtitulo">Primera esfera</p>
         <section className="pista">{m.hint}</section>
-        <div className="final">🔍 Busca la següent esfera per a començar l'aventura.</div>
-        <button onClick={onHome} className="boto secundari">Veure totes les esferes</button>
+        <button onClick={reveal} className="boto">✨ Revelar el record</button>
       </main>
     );
   }
@@ -85,7 +82,7 @@ Només s'obrirà quan hagis desxifrat totes les altres.
 Portes ${othersUnlocked} de 29. Et falten ${29 - othersUnlocked}.`}</section>
         <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-stone-100"><div className="h-full rounded-full transition-all" style={{ width: `${(othersUnlocked / 29) * 100}%`, background: "linear-gradient(90deg,var(--color),var(--color2))" }} /></div>
         <div className="final">🔍 Continua buscant esferes.</div>
-        <button onClick={onHome} className="boto secundari">Veure totes les esferes</button>
+        <button onClick={onHome} className="boto secundari">Veure el meu progrés</button>
       </main>
     );
   }
@@ -137,7 +134,7 @@ Portes ${othersUnlocked} de 29. Et falten ${29 - othersUnlocked}.`}</section>
         </div>
 
         <div className="final">{unlockedCount >= 30 ? "🌟 Has recuperat tots els records!" : "🔍 Busca la següent esfera per continuar l'aventura."}</div>
-        <button onClick={onHome} className="boto secundari">Veure totes les esferes</button>
+        <button onClick={onHome} className="boto secundari">Veure el meu progrés</button>
       </main>
     );
   }
