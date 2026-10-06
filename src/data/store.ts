@@ -161,23 +161,98 @@ export function loadFinal(): FinalMemory {
   return mergeFinal(loadLocalFinalOverride());
 }
 
-export function saveMemories(list: Memory[]) {
+/* ---------- Desat local amb DEBOUNCE ----------
+ * Escriure a localStorage en cada lletra omplia la quota (les fotos en base64 pesen molt)
+ * i llençava un alert bloquant. Ara s'escriu 800 ms després de deixar d'escriure, i si no cap
+ * es reintenta sense les fotos incrustades per no perdre els textos. Mai fa alert. */
+
+export type SaveStatus = { scope: "memories" | "final"; ok: boolean; stripped: boolean };
+const saveListeners = new Set<(s: SaveStatus) => void>();
+
+/** Subscripció perquè la interfície pugui avisar sense bloquejar l'escriptura. */
+export function onSaveStatus(cb: (s: SaveStatus) => void) {
+  saveListeners.add(cb);
+  return () => { saveListeners.delete(cb); };
+}
+function emit(s: SaveStatus) { saveListeners.forEach((l) => l(s)); }
+
+/** Les fotos incrustades com a "data:…" són les que omplen la quota. */
+function isHeavy(v: unknown) { return typeof v === "string" && v.startsWith("data:"); }
+function stripHeavy(list: Memory[]): Memory[] {
+  return list.map((m) => (isHeavy(m.photo) ? { ...m, photo: "" } : m));
+}
+function stripHeavyFinal(f: FinalMemory): FinalMemory {
+  return isHeavy(f.photo) ? { ...f, photo: "" } : f;
+}
+
+function writeMemories(list: Memory[]): SaveStatus {
   try {
     localStorage.setItem(KEY_MEM, JSON.stringify(list));
+    return { scope: "memories", ok: true, stripped: false };
   } catch {
-    alert(
-      "No se pudo guardar en este navegador: las fotos ocupan demasiado.\n\n" +
-        "Soluciones: usa URLs de imagen en vez de subirlas, o exporta el JSON y publícalo como public/recuerdos.json."
-    );
+    // 2n intent: mateixos textos però sense les fotos en base64
+    try {
+      localStorage.setItem(KEY_MEM, JSON.stringify(stripHeavy(list)));
+      return { scope: "memories", ok: false, stripped: true };
+    } catch {
+      try { localStorage.removeItem(KEY_MEM); } catch { /* res a fer */ }
+      return { scope: "memories", ok: false, stripped: true };
+    }
+  }
+}
+function writeFinal(f: FinalMemory): SaveStatus {
+  try {
+    localStorage.setItem(KEY_FINAL, JSON.stringify(f));
+    return { scope: "final", ok: true, stripped: false };
+  } catch {
+    try {
+      localStorage.setItem(KEY_FINAL, JSON.stringify(stripHeavyFinal(f)));
+      return { scope: "final", ok: false, stripped: true };
+    } catch {
+      return { scope: "final", ok: false, stripped: true };
+    }
   }
 }
 
+let memTimer: ReturnType<typeof setTimeout> | null = null;
+let memPending: Memory[] | null = null;
+let finTimer: ReturnType<typeof setTimeout> | null = null;
+let finPending: FinalMemory | null = null;
+
+/** Programa el desat (no bloqueja mentre s'escriu). Es pot forçar amb flushLocal(). */
+export function saveMemories(list: Memory[]) {
+  memPending = list;
+  if (memTimer) clearTimeout(memTimer);
+  memTimer = setTimeout(flushMemories, 800);
+}
+
 export function saveFinal(f: FinalMemory) {
-  try {
-    localStorage.setItem(KEY_FINAL, JSON.stringify(f));
-  } catch {
-    /* ignorado: mismo motivo que arriba */
-  }
+  finPending = f;
+  if (finTimer) clearTimeout(finTimer);
+  finTimer = setTimeout(flushFinal, 800);
+}
+
+/** Escriu ara mateix el que estigui pendent. */
+export function flushMemories() {
+  if (memTimer) { clearTimeout(memTimer); memTimer = null; }
+  if (memPending) emit(writeMemories(memPending));
+  memPending = null;
+}
+export function flushFinal() {
+  if (finTimer) { clearTimeout(finTimer); finTimer = null; }
+  if (finPending) emit(writeFinal(finPending));
+  finPending = null;
+}
+export function flushLocal() {
+  flushMemories();
+  flushFinal();
+}
+
+// Si es tanca o es recarrega la pàgina, no es perd l'últim canvi pendent
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", flushLocal);
+  window.addEventListener("pagehide", flushLocal);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushLocal(); });
 }
 
 /* ---------- Contenido publicado en la web (public/recuerdos.json) ---------- */

@@ -3,7 +3,7 @@ import { X, Download, Upload, ImagePlus, ChevronDown, ChevronUp, Printer, Trash2
 import { EMOTIONS, EmotionKey, FINAL_DEFAULT, Memory, MemoryKind } from "../data/memories";
 import { GAME_DEFS, GAME_KEYS } from "../games/registry";
 import { Sphere } from "./Sphere";
-import { exportAll, fileToDataUrl, importAll, loadPublished, publishedIsStale, Progress } from "../data/store";
+import { exportAll, fileToDataUrl, importAll, loadPublished, onSaveStatus, publishedIsStale, flushLocal, Progress } from "../data/store";
 
 type Props = {
   memories: Memory[];
@@ -157,6 +157,8 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
   const [pubPhotos, setPubPhotos] = useState<Record<number, string> | null>(null);
   const [pubFinalPhoto, setPubFinalPhoto] = useState<string | null>(null);
   const [stale, setStale] = useState(false);
+  // Avís de desat: mai bloqueja, només informa (abans sortia un alert en cada lletra)
+  const [saveWarn, setSaveWarn] = useState(false);
   useEffect(() => {
     loadPublished().then((pub) => {
       const map: Record<number, string> = {};
@@ -192,6 +194,21 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
       </div>
 
       <div className="mx-auto max-w-5xl px-4 py-5">
+        {/* AVÍS: no s'han pogut guardar les fotos en aquest navegador */}
+        {saveWarn && (
+          <div className="mb-4 rounded-2xl border-2 border-orange-300 bg-orange-300/15 p-4">
+            <p className="font-black text-orange-200">⚠️ Les fotos pujades no caben en aquest navegador</p>
+            <p className="mt-1 text-xs font-semibold text-white/75">
+              Els <b>textos s'han guardat</b> i pots seguir editant amb normalitat. El que passa és que el navegador s'ha quedat sense espai per guardar les fotos incrustades (base64), així que <b>si recarregues la pàgina perdries les fotos pujades que encara no has publicat</b>.
+            </p>
+            <ol className="mt-2 list-decimal space-y-0.5 pl-5 text-xs font-semibold text-white/70">
+              <li>Prem <b>Exportar recuerdos.json</b> i puja'l a <code className="text-emerald-300">public/recuerdos.json</code> (així no perds res).</li>
+              <li>Per evitar-ho en endavant: guarda les imatges com a fitxers a <code className="text-emerald-300">public/fotos/</code> i escriu la ruta al camp d'URL (ex. <code className="text-emerald-300">fotos/01.jpg</code>) en lloc de pujar-les.</li>
+            </ol>
+            <button onClick={() => setSaveWarn(false)} className="mt-2 text-xs font-bold text-white/70 underline">Entesos, amaga</button>
+          </div>
+        )}
+
         {/* AVÍS: recuerdos.json d'una versió anterior */}
         {stale && (
           <div className="mb-4 rounded-2xl border-2 border-sky-300 bg-sky-300/15 p-4">
@@ -293,7 +310,7 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
           })}
         </div>
       </div>
-      <button onClick={onClose} className="fixed bottom-4 right-4 rounded-full bg-white p-3 text-stone-900 shadow-xl md:hidden"><X className="h-5 w-5" /></button>
+      <button onClick={() => { flushLocal(); onClose(); }} className="fixed bottom-4 right-4 rounded-full bg-white p-3 text-stone-900 shadow-xl md:hidden"><X className="h-5 w-5" /></button>
     </div>
   );
 }
