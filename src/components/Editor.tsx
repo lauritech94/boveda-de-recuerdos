@@ -199,7 +199,7 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
           <div className="mb-4 rounded-2xl border-2 border-orange-300 bg-orange-300/15 p-4">
             <p className="font-black text-orange-200">⚠️ Les fotos pujades no caben en aquest navegador</p>
             <p className="mt-1 text-xs font-semibold text-white/75">
-              Els <b>textos s'han guardat</b> i pots seguir editant amb normalitat. El que passa és que el navegador s'ha quedat sense espai per guardar les fotos incrustades (base64), així que <b>si recarregues la pàgina perdries les fotos pujades que encara no has publicat</b>.
+              Els <b>textos s'han guardat</b> i pots seguir editant amb normalitat. El navegador s'ha quedat sense espai per a les fotos incrustades (base64), així que en <b>aquest</b> navegador no es recordaran les fotos que encara no has publicat. Les fotos que ja són a <code>recuerdos.json</code> es continuen veient correctament.
             </p>
             <ol className="mt-2 list-decimal space-y-0.5 pl-5 text-xs font-semibold text-white/70">
               <li>Prem <b>Exportar recuerdos.json</b> i puja'l a <code className="text-emerald-300">public/recuerdos.json</code> (així no perds res).</li>

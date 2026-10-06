@@ -1,9 +1,14 @@
 import { CONTENT_VERSION, DEFAULT_MEMORIES, FINAL_DEFAULT, Memory } from "./memories";
 
 /** Les claus inclouen la versió del contingut: si canvio un text o un joc al codi i pujo
- *  CONTENT_VERSION, les còpies velles guardades al panell deixen de tenir efecte automàticament. */
-const KEY_MEM = `esferas_memorias_v${CONTENT_VERSION}`;
-const KEY_FINAL = `esferas_final_v${CONTENT_VERSION}`;
+ *  CONTENT_VERSION, les còpies velles guardades al panell deixen de tenir efecte automàticament.
+ *  IMPORTANT: textos i fotos es guarden SEPARATS. Les fotos en base64 són les que esgoten la
+ *  quota; si el seu desat falla, només es perden les fotos d'aquest navegador i les fotos
+ *  publicades a recuerdos.json continuen visibles. */
+const KEY_TXT = `esferas_txt_v${CONTENT_VERSION}`;
+const KEY_PHOTO = `esferas_foto_v${CONTENT_VERSION}`;
+const KEY_FINAL_TXT = `esferas_final_txt_v${CONTENT_VERSION}`;
+const KEY_FINAL_PHOTO = `esferas_final_foto_v${CONTENT_VERSION}`;
 const KEY_PROG = "esferas_progreso_v1";
 
 export type PublishedData = { memories: Partial<Memory>[]; final: Partial<FinalMemory>; v?: number };
@@ -136,21 +141,24 @@ export function mergeFinal(...parts: Partial<FinalMemory>[]): FinalMemory {
 
 /* ---------- Cambios guardados en ESTE navegador (panel de edición) ---------- */
 
+/** Textos editats en aquest navegador (petits, sempre caben). */
 export function loadLocalMemoryOverrides(): Partial<Memory>[] {
-  try {
-    const raw = localStorage.getItem(KEY_MEM);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+  const texts = readJson<MemText[]>(KEY_TXT) || [];
+  const photos = readJson<MemPhoto[]>(KEY_PHOTO);
+  // Si les fotos locales no s'han pogut desar, no s'apliquen: així les fotos
+  // publicades a recuerdos.json continuen visibles en comptes de quedar en blanc.
+  if (!photos) return texts.filter((t) => t && typeof t.id === "number");
+  const map = new Map<number, string>();
+  photos.forEach((p) => { if (p && typeof p.id === "number") map.set(p.id, p.photo || ""); });
+  return texts
+    .filter((t) => t && typeof t.id === "number")
+    .map((t) => ({ ...t, photo: map.get(t.id) || "" }));
 }
 
 export function loadLocalFinalOverride(): Partial<FinalMemory> {
-  try {
-    return JSON.parse(localStorage.getItem(KEY_FINAL) || "{}");
-  } catch {
-    return {};
-  }
+  const txt = readJson<Partial<FinalMemory>>(KEY_FINAL_TXT) || {};
+  const photo = readJson<{ photo: string }>(KEY_FINAL_PHOTO);
+  return photo ? { ...txt, photo: photo.photo || "" } : { ...txt };
 }
 
 export function loadMemories(): Memory[] {
@@ -163,8 +171,21 @@ export function loadFinal(): FinalMemory {
 
 /* ---------- Desat local amb DEBOUNCE ----------
  * Escriure a localStorage en cada lletra omplia la quota (les fotos en base64 pesen molt)
- * i llençava un alert bloquant. Ara s'escriu 800 ms després de deixar d'escriure, i si no cap
- * es reintenta sense les fotos incrustades per no perdre els textos. Mai fa alert. */
+ * i llençava un alert bloquejant. Ara s'escriu 800 ms després de deixar d'escriure, i les fotos
+ * es guarden en una clau pròpia: si no caben, els textos es desen igualment i les fotos
+ * publicades a recuerdos.json continuen visibles. Mai fa alert. */
+
+type MemText = Partial<Memory> & { id: number };
+type MemPhoto = { id: number; photo: string };
+
+function readJson<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
 
 export type SaveStatus = { scope: "memories" | "final"; ok: boolean; stripped: boolean };
 const saveListeners = new Set<(s: SaveStatus) => void>();
@@ -176,42 +197,32 @@ export function onSaveStatus(cb: (s: SaveStatus) => void) {
 }
 function emit(s: SaveStatus) { saveListeners.forEach((l) => l(s)); }
 
-/** Les fotos incrustades com a "data:…" són les que omplen la quota. */
-function isHeavy(v: unknown) { return typeof v === "string" && v.startsWith("data:"); }
-function stripHeavy(list: Memory[]): Memory[] {
-  return list.map((m) => (isHeavy(m.photo) ? { ...m, photo: "" } : m));
-}
-function stripHeavyFinal(f: FinalMemory): FinalMemory {
-  return isHeavy(f.photo) ? { ...f, photo: "" } : f;
+function writeMemories(list: Memory[]): SaveStatus {
+  // Textos: petits, gairebé sempre caben
+  const texts: MemText[] = list.map(({ photo, ...rest }) => ({ ...rest, id: rest.id }));
+  let txtOk = true;
+  try { localStorage.setItem(KEY_TXT, JSON.stringify(texts)); } catch { txtOk = false; }
+
+  // Fotos: en base64 poden esgotar la quota. Si fallen, s'esborra la clau perquè
+  // no deixi valors buits que taparien les fotos publicades a recuerdos.json.
+  const photos: MemPhoto[] = list.map((m) => ({ id: m.id, photo: m.photo || "" }));
+  let photoOk = true;
+  try { localStorage.setItem(KEY_PHOTO, JSON.stringify(photos)); }
+  catch { photoOk = false; try { localStorage.removeItem(KEY_PHOTO); } catch { /* res a fer */ } }
+
+  return { scope: "memories", ok: txtOk && photoOk, stripped: !photoOk };
 }
 
-function writeMemories(list: Memory[]): SaveStatus {
-  try {
-    localStorage.setItem(KEY_MEM, JSON.stringify(list));
-    return { scope: "memories", ok: true, stripped: false };
-  } catch {
-    // 2n intent: mateixos textos però sense les fotos en base64
-    try {
-      localStorage.setItem(KEY_MEM, JSON.stringify(stripHeavy(list)));
-      return { scope: "memories", ok: false, stripped: true };
-    } catch {
-      try { localStorage.removeItem(KEY_MEM); } catch { /* res a fer */ }
-      return { scope: "memories", ok: false, stripped: true };
-    }
-  }
-}
 function writeFinal(f: FinalMemory): SaveStatus {
-  try {
-    localStorage.setItem(KEY_FINAL, JSON.stringify(f));
-    return { scope: "final", ok: true, stripped: false };
-  } catch {
-    try {
-      localStorage.setItem(KEY_FINAL, JSON.stringify(stripHeavyFinal(f)));
-      return { scope: "final", ok: false, stripped: true };
-    } catch {
-      return { scope: "final", ok: false, stripped: true };
-    }
-  }
+  const { photo, ...rest } = f;
+  let txtOk = true;
+  try { localStorage.setItem(KEY_FINAL_TXT, JSON.stringify(rest)); } catch { txtOk = false; }
+
+  let photoOk = true;
+  try { localStorage.setItem(KEY_FINAL_PHOTO, JSON.stringify({ photo: photo || "" })); }
+  catch { photoOk = false; try { localStorage.removeItem(KEY_FINAL_PHOTO); } catch { /* res a fer */ } }
+
+  return { scope: "final", ok: txtOk && photoOk, stripped: !photoOk };
 }
 
 let memTimer: ReturnType<typeof setTimeout> | null = null;
