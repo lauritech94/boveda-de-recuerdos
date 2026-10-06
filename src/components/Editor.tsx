@@ -147,6 +147,28 @@ function MemoryForm({ m, onChange }: { m: Memory; onChange: (m: Memory) => void 
   );
 }
 
+/** Comprova si una imatge de public/ es carrega a la web publicada. */
+function ImageCheck({ path, label }: { path: string; label: string }) {
+  const url = new URL(path, document.baseURI).href;
+  const [state, setState] = useState<"loading" | "ok" | "fail">("loading");
+  return (
+    <div className="flex items-center gap-3 rounded-xl bg-white/5 p-2">
+      <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/10">
+        {state !== "fail" ? (
+          <img src={url} alt="" className="h-full w-full object-contain" onLoad={() => setState("ok")} onError={() => setState("fail")} />
+        ) : (
+          <span className="text-xl">❌</span>
+        )}
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs font-black">{state === "ok" ? "✅" : state === "fail" ? "❌" : "⏳"} {label}</p>
+        <code className="block break-all text-[11px] text-emerald-300">public/{path}</code>
+        {state === "fail" && <p className="text-[11px] font-semibold text-orange-200">No s'ha trobat. Puja-la a GitHub en aquesta carpeta.</p>}
+      </div>
+    </div>
+  );
+}
+
 export function Editor({ memories, final, progress, onChange, onChangeFinal, onResetProgress, onUnlockAll, onClose, onPrint }: Props) {
   const [open, setOpen] = useState<number | null>(null);
   const [showFinal, setShowFinal] = useState(false);
@@ -242,6 +264,18 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
         {totalUnpublished === 0 && pubPhotos !== null && memories.some((m) => !!m.photo) && (
           <div className="mb-4 rounded-2xl border border-emerald-300/30 bg-emerald-400/10 px-4 py-2 text-xs font-bold text-emerald-200">✅ Todas las fotos de este panel ya están en <code>recuerdos.json</code> publicado.</div>
         )}
+
+        {/* COMPROVACIÓ DE LES IMATGES DELS MINIONS */}
+        <div className="mb-4 rounded-2xl border border-yellow-300/30 bg-yellow-300/10 p-4">
+          <p className="font-black text-yellow-200">🍌 Imatges dels Minions</p>
+          <p className="mt-1 text-xs font-semibold text-white/60">
+            Si una imatge surt amb ❌, la web mostra el dibuix de reserva. Puja el PNG a GitHub a la ruta exacta indicada (majúscules i minúscules incloses).
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <ImageCheck path="minions/minion.png" label="Minion general (totes les pantalles)" />
+            <ImageCheck path="minions/iphone.png" label="Minion de la bola 10 (iPhone)" />
+          </div>
+        </div>
 
         {/* ZONA DE PRUEBAS */}
         <div className="mb-4 rounded-2xl border border-red-300/30 bg-red-400/10 p-4">
