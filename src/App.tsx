@@ -40,6 +40,9 @@ export default function App() {
   const [toast, setToast] = useState<string | null>(null);
   const [showProgress, setShowProgress] = useState(false);
   const [minionComment, setMinionComment] = useState<string | null>(null);
+  // No es pinta res fins que les dades publicades estiguin carregades:
+  // així no es veu ni un instant el text per defecte abans del vostre.
+  const [ready, setReady] = useState(false);
 
   const { on: soundActive, toggle: toggleSound } = useSound();
 
@@ -94,12 +97,15 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    loadPublished().then((pub) => {
-      if (!pub) return;
-      const base = applyMemoryOverrides(DEFAULT_MEMORIES, pub.memories);
-      setMemories(applyMemoryOverrides(base, loadLocalMemoryOverrides()));
-      setFinal(mergeFinal(pub.final, loadLocalFinalOverride()));
-    });
+    loadPublished()
+      .then((pub) => {
+        if (!pub) return;
+        const base = applyMemoryOverrides(DEFAULT_MEMORIES, pub.memories);
+        setMemories(applyMemoryOverrides(base, loadLocalMemoryOverrides()));
+        setFinal(mergeFinal(pub.final, loadLocalFinalOverride()));
+      })
+      .catch(() => { /* sense recuerdos.json es fa servir el codi */ })
+      .then(() => setReady(true));
   }, []);
 
   useEffect(() => {
@@ -149,6 +155,24 @@ export default function App() {
       <p>{minionComment}</p>
     </div>
   );
+
+  /* ---------- CÀRREGA: evita el parpelleig del text per defecte ---------- */
+  if (!ready && !editing) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <Fons />
+        <main className="tarjeta flex flex-col items-center py-14 text-center" style={active ? { borderColor: EMOTIONS[active.emotion].color } : undefined}>
+          {active ? (
+            <Sphere emotion={active.emotion} emotion2={active.emotion2} size={110} pulse />
+          ) : (
+            <div className="animate-floaty"><Minion variant="happy" size={110} /></div>
+          )}
+          <h1 className="titol mt-5">{active ? `Esfera ${pad(active.id)}` : APP_NAME}</h1>
+          <p className="subtitulo">Obrint la càmera dels records…</p>
+        </main>
+      </div>
+    );
+  }
 
   /* ---------- PÀGINA D'UNA ESFERA ---------- */
   if (active && !editing) {

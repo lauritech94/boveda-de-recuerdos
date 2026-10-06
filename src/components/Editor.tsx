@@ -168,6 +168,10 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
       setStale(publishedIsStale());
     });
   }, []);
+
+  // Escolta el resultat del desat local (amb debounce): si la quota és plena, avisa un cop
+  useEffect(() => onSaveStatus((s) => setSaveWarn(!s.ok)), []);
+
   const unpublished = (m: Memory) => !!m.photo && pubPhotos !== null && pubPhotos[m.id] !== m.photo;
   const unpublishedIds = memories.filter(unpublished).map((m) => m.id);
   const finalUnpublished = !!final.photo && pubFinalPhoto !== null && pubFinalPhoto !== final.photo;

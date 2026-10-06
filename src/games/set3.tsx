@@ -396,6 +396,23 @@ export function GameFlash({ onComplete, config }: GameProps) {
 }
 
 /* DAU 21 */
+/* Dau dibuixat amb punts (els símbols ⚀⚁⚂… es veuen malament en molts mòbils) */
+const PIPS: Record<number, number[]> = { 1: [4], 2: [2, 6], 3: [2, 4, 6], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+function Die({ v, size = 44 }: { v: number; size?: number }) {
+  return (
+    <span
+      className="animate-pop-in inline-grid shrink-0 grid-cols-3 grid-rows-3 rounded-lg bg-white p-[13%] shadow-md ring-1 ring-black/10"
+      style={{ width: size, height: size }}
+    >
+      {Array.from({ length: 9 }).map((_, i) => (
+        <span key={i} className="flex items-center justify-center">
+          {(PIPS[v] || []).includes(i) && <span className="block h-[62%] w-[62%] rounded-full bg-stone-800" />}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export function GameDice21({ onComplete }: GameProps) {
   const [ps, setPs] = useState<number[]>([]);
   const [cs, setCs] = useState<number[]>([]);
@@ -427,15 +444,14 @@ export function GameDice21({ onComplete }: GameProps) {
     }, 400);
   };
   const reset = () => { setPs([]); setCs([]); setPhase("play"); setResult(""); setMsg("Tira el dau. Acosta't a 21 sense passar-te."); };
-  const Dice = ({ v }: { v: number }) => (<span className="animate-pop-in flex h-12 w-12 items-center justify-center rounded-xl bg-white text-2xl shadow-sm ring-1 ring-stone-200">{"⚀⚁⚂⚃⚄⚅"[v - 1]}</span>);
 
   return (
     <div>
       <GameHeader instruction="Blackjack amb daus 🎲: suma 21 o queda't a prop. La CPU es planta a 16." />
       <div className="rounded-2xl bg-emerald-900 p-4 text-white">
         <div className="flex items-center justify-between"><p className="text-xs font-black uppercase opacity-70">Tu: {sum(ps)}</p><p className="text-xs font-black uppercase opacity-70">CPU: {phase === "done" ? sum(cs) : "?"}</p></div>
-        <div className="mt-2 flex min-h-[52px] flex-wrap gap-1.5">{ps.map((d, i) => (<Dice key={i} v={d} />))}{ps.length === 0 && <span className="text-sm font-bold opacity-50">Sense tirades encara</span>}</div>
-        {phase === "done" && <div className="mt-2 flex flex-wrap gap-1.5 border-t border-white/20 pt-2">{cs.map((d, i) => (<Dice key={i} v={d} />))}</div>}
+        <div className="mt-2 flex min-h-[52px] flex-wrap items-center gap-1.5">{ps.map((d, i) => (<Die key={i} v={d} />))}{ps.length === 0 && <span className="text-sm font-bold opacity-50">Sense tirades encara</span>}</div>
+        {phase === "done" && <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-white/20 pt-2">{cs.map((d, i) => (<Die key={i} v={d} />))}</div>}
         <p className="mt-3 rounded-xl bg-white/10 px-3 py-2 text-center text-sm font-bold">{rolling ? "🎲 Girant…" : msg}</p>
         {result && <p className="animate-pop-in mt-2 text-center text-2xl font-black">{result}</p>}
       </div>
@@ -614,17 +630,21 @@ export function GameBalloon({ onComplete, config }: GameProps) {
       />
       <div
         ref={boxRef}
-        onPointerDown={boost}
-        style={{ touchAction: "manipulation" }}
-        className="relative mx-auto h-72 w-full max-w-[340px] overflow-hidden rounded-2xl bg-gradient-to-b from-sky-200 to-sky-50 ring-1 ring-sky-200"
+        className="relative mx-auto h-72 w-full max-w-[340px] select-none overflow-hidden rounded-2xl bg-gradient-to-b from-sky-200 to-sky-50 ring-1 ring-sky-200"
       >
-        <div className="absolute inset-x-0 bottom-0 h-3 bg-emerald-300/70" />
-        <span
-          className="absolute select-none text-5xl"
-          style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: "translate(-50%, -50%)", filter: "drop-shadow(0 6px 8px rgba(0,0,0,.18))" }}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3 bg-emerald-300/70" />
+        {/* Només el globus rep el toc: àrea generosa per al dit */}
+        <button
+          type="button"
+          aria-label="Donar un impuls al globus"
+          onPointerDown={(e) => { e.preventDefault(); boost(); }}
+          disabled={phase !== "play"}
+          className={`absolute -translate-x-1/2 -translate-y-1/2 p-4 active:scale-95 ${phase === "play" ? "" : "pointer-events-none"}`}
+          style={{ left: `${pos.x}%`, top: `${pos.y}%`, touchAction: "none" }}
         >
-          {EMO}
-        </span>
+          <span className="block text-6xl leading-none" style={{ filter: "drop-shadow(0 6px 8px rgba(0,0,0,.18))" }}>{EMO}</span>
+          <span className="mx-auto block h-5 w-px bg-stone-500/60" />
+        </button>
         {phase === "idle" && (
           <div className="absolute inset-0 flex items-center justify-center">
             <button onClick={start} className="rounded-2xl bg-pink-500 px-6 py-3 text-lg font-black text-white shadow-md active:scale-[0.98]">
@@ -633,7 +653,7 @@ export function GameBalloon({ onComplete, config }: GameProps) {
           </div>
         )}
       </div>
-      {phase === "play" && <p className="mt-2 text-center text-xs font-bold text-stone-500">Toca el requadre (o el globus) per donar-li un impuls cap amunt</p>}
+      {phase === "play" && <p className="mt-2 text-center text-xs font-bold text-stone-500">Toca només el globus per donar-li un impuls cap amunt</p>}
       {phase === "won" && (
         <div className="mt-4">
           <WinBanner title="No ha caigut ni un cop! 🎈" subtitle={`L'has tingut a l'aire ${NEED} segons.`} score={`${NEED}s`} onRestart={start} />
