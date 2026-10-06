@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import confetti from "canvas-confetti";
 import { APP_NAME, DEFAULT_MEMORIES, EMOTIONS, EmotionKey, FINAL_DEFAULT, Memory } from "./data/memories";
 import {
@@ -51,15 +51,31 @@ export default function App() {
   const updateMemories = (list: Memory[]) => { setMemories(list); saveMemories(list); };
   const updateFinal = (f: typeof FINAL_DEFAULT) => { setFinal(f); saveFinal(f); };
 
-  // Frases divertides del Minion cada 5 esferes
+  // Frases del Minion cada 5 esferes. Es compara amb el recompte anterior (no amb "===")
+  // perquè funcioni encara que es passi d'esfera en esfera sense tornar mai a l'inici,
+  // i es mostra com a avís flotant visible des de QUALSEVOL pantalla.
+  const MILESTONES: { n: number; msg: string }[] = [
+    { n: 5, msg: "🍌 Bello! Ja en portes 5? No m'ho crec!" },
+    { n: 10, msg: "🎁 Poopaye! Has arribat al primer regal!" },
+    { n: 15, msg: "⚡ Ja ets a la meitat dels records!" },
+    { n: 20, msg: "✈️ Tulaliloo ti amo! Un altre regal!" },
+    { n: 25, msg: "🔥 Només te'n falten 5, nooo!" },
+    { n: 29, msg: "🎬 Només falta l'última! Prepara't!" },
+    { n: 30, msg: "🌟 BANANAAA! Els has aconseguit tots!" },
+  ];
+  const prevCountRef = useRef(unlockedCount);
   useEffect(() => {
-    if (unlockedCount === 5) setMinionComment("🍌 ¡Bello! Ja en portes 5? No m'ho crec!");
-    else if (unlockedCount === 10) setMinionComment("🎁 Poopaye! Has arribat al primer regal!");
-    else if (unlockedCount === 15) setMinionComment("⚡ Ja ets a la meitat dels records!");
-    else if (unlockedCount === 20) setMinionComment("✈️ Tulaliloo ti amo! Un altre regal!");
-    else if (unlockedCount === 25) setMinionComment("🔥 Només te'n falten 5, nooo!");
-    else if (unlockedCount === 29) setMinionComment("🎬 Només falta l'última! Prepara't!");
-    else if (unlockedCount === 30) setMinionComment("🌟 BANANAAA! Els has aconseguit tots!");
+    const prev = prevCountRef.current;
+    if (unlockedCount > prev) {
+      const crossed = MILESTONES.filter((ms) => ms.n > prev && ms.n <= unlockedCount);
+      if (crossed.length) {
+        const msg = crossed[crossed.length - 1].msg;
+        setMinionComment(msg);
+        playSound("star");
+        setTimeout(() => setMinionComment((c) => (c === msg ? null : c)), 6000);
+      }
+    }
+    prevCountRef.current = unlockedCount;
   }, [unlockedCount]);
 
   useEffect(() => {
@@ -125,12 +141,22 @@ export default function App() {
     return r;
   }, [memories, progress]);
 
+  // Avís flotant del Minion: visible des de QUALSEVOL pantalla (inici o dins d'una esfera),
+  // perquè si es van escanejant boles seguides mai es torna a l'inici.
+  const minionOverlay = minionComment && (
+    <div className="minion-toast" onClick={() => setMinionComment(null)}>
+      <Minion variant="happy" size={56} anim="minion-salt" />
+      <p>{minionComment}</p>
+    </div>
+  );
+
   /* ---------- PÀGINA D'UNA ESFERA ---------- */
   if (active && !editing) {
     const others = Object.keys(progress).filter((k) => Number(k) !== active.id).length;
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
         <Fons />
+        {minionOverlay}
         <MemoryExperience
           memory={active}
           unlocked={!!progress[active.id]}
@@ -148,6 +174,7 @@ export default function App() {
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <Fons />
+      {minionOverlay}
 
       <main className="tarjeta">
         {/* Capçalera amb control de so */}
@@ -169,7 +196,7 @@ export default function App() {
         {/* Minion que saluda a la capçalera */}
         <div className="relative mx-auto my-1 flex justify-center">
           <Minion
-            variant={allDone ? "party" : unlockedCount > 20 ? "happy" : "peek"}
+            variant="happy"
             size={90}
             anim={allDone ? "minion-salt" : "minion-anim"}
           />
@@ -183,14 +210,6 @@ export default function App() {
             ? "Missatge urgent"
             : `${unlockedCount} de 30 records recuperats`}
         </p>
-
-        {/* Comentari del Minion cada 5 esferes */}
-        {minionComment && (
-          <div className="animate-pop-in my-3 rounded-2xl bg-amber-200/60 p-3 text-sm font-bold text-amber-950 ring-1 ring-amber-300 flex items-center justify-center gap-2">
-            <span>💬</span>
-            <span>{minionComment}</span>
-          </div>
-        )}
 
         {/* Missatge final en completar les 30 */}
         {allDone && (

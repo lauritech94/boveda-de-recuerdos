@@ -31,7 +31,7 @@ export const APP_NAME = "La Càmera dels Records";
  *  Puja aquest número CADA COP que es canviï un text o un joc a aquest fitxer.
  *  Serveix perquè el navegador descarti les còpies velles guardades al panell i a
  *  recuerdos.json i mostri sempre els textos nous. Sense això, surten els antics. */
-export const CONTENT_VERSION = 6;
+export const CONTENT_VERSION = 8;
 
 /** Targeta d'inici (l'enllaç principal, sense ?bola=). No és cap esfera. Editable des del panell. */
 export const HOME_TEXT_DEFAULT = `Aquesta nit, un Minion molt trapella ha volgut robar-te els teus records.
@@ -68,9 +68,9 @@ const PH = "Escriu aquí el teu text per a aquest record…";
 export const DEFAULT_MEMORIES: Memory[] = [
   { id: 1, kind: "intro", title: "El primer record", emotion: "alegria", when: "Primera esfera", hint: FIRST_SPHERE_TEXT, gameKey: "", gameWhy: "Primera esfera: ja desxifrada, sense joc. Ella només prem el botó per revelar el record.", message: PH, photo: "" },
 
-  { id: 2, kind: "game", title: "Plomes", emotion: "alegria", when: "Pensa-hi bé", hint: "Pensa-hi bé abans de respondre…", gameKey: "riddle", gameWhy: "Endevinalla: desxifra la connexió abans de continuar.", message: PH, photo: "", config: { question: "🪶 Un cap indi.\n\n🦜 Jack.\n\nQuè tenen en comú?", answer: "plomes,plumes,ploma,pluma" } },
+  { id: 2, kind: "game", title: "El nostre amagatall", emotion: "alegria", when: "Infància", hint: "1, 2, 3… amagar! Compta fins a 30 sense fer trampes.", gameKey: "order30", gameWhy: "Comptar de l'1 al 30 com quan jugàvem a amagar.", message: PH, photo: "" },
   { id: 3, kind: "game", title: "La casa dels avis", emotion: "alegria", emotion2: "tristesa", when: "Tots els estius", hint: "Un lloc amb olor de cuina i tardes llargues. Troba el que sempre hi havia.", gameKey: "memory", gameWhy: "Parelles de memòria amb els objectes de casa dels avis.", message: PH, photo: "", config: { emojis: "🍪,👵,📻,🌻,🐓,☕" } },
-  { id: 4, kind: "game", title: "El nostre amagatall", emotion: "alegria", when: "Infància", hint: "1, 2, 3… amagar! Compta fins a 30 sense fer trampes.", gameKey: "order30", gameWhy: "Comptar de l'1 al 30 com quan jugàvem a amagar.", message: PH, photo: "" },
+  { id: 4, kind: "game", title: "Plomes", emotion: "alegria", when: "Pensa-hi bé", hint: "Pensa-hi bé abans de respondre…", gameKey: "riddle", gameWhy: "Endevinalla: desxifra la connexió abans de continuar.", message: PH, photo: "", config: { question: "🪶 Un cap indi.\n\n🦜 Jack.\n\nQuè tenen en comú?", answer: "plomes,plumes,ploma,pluma" } },
   { id: 5, kind: "game", title: "Baralles de germanes", emotion: "rabia", when: "Sempre", hint: "Una baralla de germanes de les de tota la vida… però aquest cop el Minion fa de rival. Tira de la corda més fort que ell!", gameKey: "tug", gameWhy: "Tira i arronsa: la baralla de germanes de tota la vida.", message: PH, photo: "", config: { opponent: "🍌" } },
   { id: 6, kind: "game", title: "Vacances a la platja", emotion: "alegria", when: "Estiu", hint: "Sol, sorra i tresors que el mar deixa a la vora. Recull-ne tants com puguis.", gameKey: "catch", gameWhy: "Atrapar petxines i esquivar meduses.", message: PH, photo: "", config: { good: "🐚", bad: "🦀", basket: "🪣" } },
   { id: 7, kind: "game", title: "La nostra cançó", emotion: "alegria", when: "Viatges en cotxe", hint: "Aquella cançó que cantàvem a crits. Repeteix la melodia nota a nota.", gameKey: "simon", gameWhy: "Simon diu amb notes: repeteix la melodia.", message: PH, photo: "" },

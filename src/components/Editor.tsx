@@ -117,6 +117,13 @@ function MemoryForm({ m, onChange }: { m: Memory; onChange: (m: Memory) => void 
             <p className="text-xs font-black text-pink-200">🎁 Datos del regalo</p>
             <div><label className={labelCls}>Emoji del regalo</label><input value={m.config?.giftEmoji ?? ""} onChange={(e) => setCfg("giftEmoji", e.target.value)} placeholder="📱" className={inputCls} /></div>
             <div><label className={labelCls}>Nombre del regalo (en catalán, título grande)</label><input value={m.config?.giftName ?? ""} onChange={(e) => setCfg("giftName", e.target.value)} placeholder="Un iPhone nou!" className={inputCls} /></div>
+            {m.id === 10 && (
+              <div>
+                <label className={labelCls}>PNG del personaje con el iPhone</label>
+                <input value={m.config?.minionImage ?? ""} onChange={(e) => setCfg("minionImage", e.target.value)} placeholder="minions/iphone.png" className={inputCls} />
+                <p className="mt-1 text-[11px] font-semibold text-white/60">Sube el PNG transparente a <code>public/minions/iphone.png</code> en GitHub. Aparecerá animado antes y después de abrir el regalo. No es la foto del recuerdo: esa se añade arriba por separado.</p>
+              </div>
+            )}
             <p className="text-[11px] font-semibold text-white/40">Ella tocará la caja 🎁 tres veces y se revelará el regalo, la foto y tu mensaje.</p>
           </div>
         )}

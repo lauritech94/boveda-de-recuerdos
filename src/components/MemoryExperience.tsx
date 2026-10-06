@@ -4,7 +4,7 @@ import { APP_NAME, EMOTIONS, Memory } from "../data/memories";
 import { GAME_DEFS } from "../games/registry";
 import { Sphere } from "./Sphere";
 import { Minion } from "./Minion";
-import { DecryptedText } from "./DecryptedText";
+import { GiftCharacter } from "./GiftCharacter";
 import { TypewriterText } from "./TypewriterText";
 import { playSound, vibrate, useSound } from "./useSound";
 import { Volume2, VolumeX, SkipForward } from "lucide-react";
@@ -32,21 +32,32 @@ function toEmbed(url: string): { kind: "iframe" | "video" | "none"; src: string 
   return { kind: "video", src: u };
 }
 
+/** Bloc de pista: text senzill amb una "lluentor" que el travessa un cop en aparèixer. */
+function Pista({ text, color }: { text: string; color: string }) {
+  return (
+    <section className="pista pista-shine" style={{ borderLeftColor: color }}>
+      {text}
+    </section>
+  );
+}
+
 export function MemoryExperience({ memory: m, unlocked, unlockedCount, othersUnlocked, onUnlock, onHome }: Props) {
   const emo = EMOTIONS[m.emotion];
   const def = GAME_DEFS[m.gameKey];
   const Comp = def?.Comp;
   const { on: soundActive, toggle: toggleSound } = useSound();
 
-  const [phase, setPhase] = useState<"intro" | "game" | "cracking" | "reveal">(unlocked ? "reveal" : "intro");
+  const [phase, setPhase] = useState<"intro" | "game" | "reveal">(unlocked ? "reveal" : "intro");
   const [gameDone, setGameDone] = useState(false);
   const [label, setLabel] = useState<string | undefined>();
   const [giftTaps, setGiftTaps] = useState(0);
   const [shaking, setShaking] = useState(false);
   const [failsCount, setFailsCount] = useState(0);
-  const [photoReady, setPhotoReady] = useState(false);
+  // Si l'esfera ja estava desbloquejada abans (hi tornem), la foto es veu d'entrada.
+  const [photoReady, setPhotoReady] = useState(unlocked);
+  const [justOpened, setJustOpened] = useState(false);
 
-  // Aplica color de l'emoció a tot el document
+  // Aplica el color de l'emoció a tota la targeta (botons, vora, fons de la pista…)
   useEffect(() => {
     document.documentElement.style.setProperty("--color", emo.color);
     document.documentElement.style.setProperty("--color2", m.emotion2 ? EMOTIONS[m.emotion2].color : emo.color);
@@ -63,7 +74,7 @@ export function MemoryExperience({ memory: m, unlocked, unlockedCount, othersUnl
     setGameDone(false);
     setGiftTaps(0);
     setFailsCount(0);
-    setPhotoReady(false);
+    setPhotoReady(unlocked); // ja desbloquejada abans → la foto es veu directament
   }, [m.id, unlocked]);
 
   const celebrate = (big = false) => {
@@ -86,19 +97,21 @@ export function MemoryExperience({ memory: m, unlocked, unlockedCount, othersUnl
     celebrate();
   };
 
+  /** Revelació directa: el color de l'emoció + un flaix breu fan tota la feina,
+   *  sense cap pantalla intermèdia d'espera. */
   const triggerReveal = () => {
     onUnlock(label);
-    setPhase("cracking");
     playSound("unlock");
     vibrate([80, 50, 80]);
+    setPhotoReady(false);
+    setJustOpened(true);
+    setPhase("reveal");
+    window.scrollTo({ top: 0, behavior: "smooth" });
     setTimeout(() => {
-      setPhase("reveal");
-      setTimeout(() => {
-        celebrate(true);
-        setPhotoReady(true);
-      }, 350);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 700);
+      celebrate(true);
+      setPhotoReady(true);
+    }, 260);
+    setTimeout(() => setJustOpened(false), 900);
   };
 
   const skipChallenge = () => {
@@ -137,9 +150,7 @@ export function MemoryExperience({ memory: m, unlocked, unlockedCount, othersUnl
         <h1 className="titol mt-3" style={{ color: emo.text }}>Esfera desxifrada ✨</h1>
         <p className="subtitulo">Primera esfera</p>
 
-        <section className="pista" style={{ borderLeftColor: emo.color }}>
-          <DecryptedText text={m.hint} revealed={true} speed={24} />
-        </section>
+        <Pista text={m.hint} color={emo.color} />
 
         <button onClick={triggerReveal} className="boto" style={{ background: `linear-gradient(135deg, ${emo.color}, var(--color2))` }}>
           ✨ Revelar el record
@@ -177,23 +188,7 @@ Portes ${othersUnlocked} de 29. Et falten ${29 - othersUnlocked}.`}</section>
     );
   }
 
-  /* ---------- ANIMACIÓ D'ESQUERDAMENT (Fase 'cracking') ---------- */
-  if (phase === "cracking") {
-    return (
-      <main className="tarjeta animate-pop-in flex flex-col items-center justify-center py-10" style={{ borderColor: emo.color }}>
-        <div className="relative flex items-center justify-center">
-          <div className="animate-spin text-7xl">🔮</div>
-          <div className="absolute inset-0 flex items-center justify-center animate-ping text-5xl">
-            ✨
-          </div>
-        </div>
-        <h2 className="titol mt-6 text-2xl" style={{ color: emo.text }}>L'esfera s'està obrint...</h2>
-        <p className="subtitulo">Desxifrant el record interior</p>
-      </main>
-    );
-  }
-
-  /* ---------- REVELACIÓ EMOTIVA (POLAROID + MÀQUINA D'ESCRIURE) ---------- */
+  /* ---------- REVELACIÓ (color de l'emoció + polaroid + màquina d'escriure) ---------- */
   if (phase === "reveal") {
     const embed = m.kind === "video" ? toEmbed(m.config?.videoUrl) : null;
     const isGift = m.kind === "gift";
@@ -201,9 +196,10 @@ Portes ${othersUnlocked} de 29. Et falten ${29 - othersUnlocked}.`}</section>
     return (
       <main className="tarjeta animate-pop-in text-center" style={{ borderColor: emo.color }}>
         {header}
-        <div className="flex items-center justify-center gap-3">
+        <div className="relative flex items-center justify-center gap-3">
+          {justOpened && <span className="flaix-obertura" style={{ background: emo.color }} />}
           <div className="icono">{isGift ? m.config?.giftEmoji || "🎁" : m.kind === "video" ? "🎬" : emo.emoji}</div>
-          <Minion variant="party" size={60} anim="minion-salt" />
+          {m.id === 10 ? <GiftCharacter src={m.config?.minionImage || "minions/iphone.png"} small /> : <Minion variant="party" size={60} anim="minion-salt" />}
         </div>
 
         <h1 className="titol" style={{ color: emo.text }}>
@@ -294,14 +290,12 @@ Portes ${othersUnlocked} de 29. Et falten ${29 - othersUnlocked}.`}</section>
         {header}
         <div className="flex justify-center items-center gap-3">
           <div className="icono">✨</div>
-          <Minion variant="gift" size={76} anim="minion-anim" />
+          {m.id === 10 ? <GiftCharacter src={m.config?.minionImage || "minions/iphone.png"} /> : <Minion variant="gift" size={76} anim="minion-anim" />}
         </div>
         <h1 className="titol" style={{ color: emo.text }}>Esfera especial</h1>
         <p className="subtitulo">{m.when}</p>
 
-        <section className="pista" style={{ borderLeftColor: emo.color }}>
-          <DecryptedText text={m.hint} revealed={true} speed={20} />
-        </section>
+        <Pista text={m.hint} color={emo.color} />
 
         <button
           onClick={tapGift}
@@ -339,15 +333,13 @@ Portes ${othersUnlocked} de 29. Et falten ${29 - othersUnlocked}.`}</section>
         </div>
         <h1 className="titol" style={{ color: emo.text }}>L'última esfera</h1>
         <p className="subtitulo">Ho has aconseguit</p>
-        <section className="pista" style={{ borderLeftColor: emo.color }}>
-          <DecryptedText text={m.hint} revealed={true} speed={20} />
-        </section>
+        <Pista text={m.hint} color={emo.color} />
         <button onClick={triggerReveal} className="boto">▶ Obrir l'última esfera</button>
       </main>
     );
   }
 
-  /* ---------- FASE D'INTRODUCCIÓ: PISTA XIFRADA ---------- */
+  /* ---------- FASE D'INTRODUCCIÓ: PISTA ---------- */
   if (phase === "intro") {
     return (
       <main className="tarjeta animate-pop-in" style={{ borderColor: emo.color }}>
@@ -355,17 +347,14 @@ Portes ${othersUnlocked} de 29. Et falten ${29 - othersUnlocked}.`}</section>
         <div className="relative mx-auto flex justify-center py-2">
           <Sphere emotion={m.emotion} emotion2={m.emotion2} size={120} pulse />
           <div className="absolute -bottom-2 -right-3">
-            <Minion variant="peek" size={68} anim="minion-anim" />
+            <Minion variant="sleepy" size={68} anim="minion-anim" />
           </div>
         </div>
 
         <h1 className="titol mt-2" style={{ color: emo.text }}>Esfera encriptada</h1>
         <p className="subtitulo">Record desconegut · {m.when}</p>
 
-        {/* Text que s'auto-desencripta a l'ull */}
-        <section className="pista" style={{ borderLeftColor: emo.color }}>
-          <DecryptedText text={m.hint} revealed={true} speed={24} />
-        </section>
+        <Pista text={m.hint} color={emo.color} />
 
         <div className="mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold" style={{ background: emo.soft, color: emo.text }}>
           🧩 Repte: {def?.name} · {def?.time}

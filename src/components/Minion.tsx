@@ -9,7 +9,7 @@ import type { CSSProperties } from "react";
  *   minion-anim · minion-salt · minion-espanta · minion-baluga · minion-menja
  */
 
-export type MinionVariant = "happy" | "scared" | "sleepy" | "party" | "wave" | "gift" | "defeat" | "peek";
+export type MinionVariant = "happy" | "scared" | "sleepy" | "party" | "wave" | "gift" | "phone" | "defeat" | "peek" | "thief";
 
 export function Minion({
   variant = "happy",
@@ -25,6 +25,7 @@ export function Minion({
   style?: CSSProperties;
 }) {
   const wide = variant === "scared";
+  const thief = variant === "thief";
   return (
     <svg
       viewBox="0 0 120 158"
@@ -58,6 +59,13 @@ export function Minion({
           <stop offset="0%" stopColor="#FF8FB8" />
           <stop offset="100%" stopColor="#F0433A" />
         </linearGradient>
+        {/* Silueta del cos: la corretja i els tirants no en surten */}
+        <clipPath id="mn-body-clip">
+          <rect x="25" y="20" width="70" height="112" rx="35" />
+        </clipPath>
+        <pattern id="mn-denim" width="6" height="6" patternUnits="userSpaceOnUse">
+          <path d="M0 6 L6 0 M-3 3 L3 -3" stroke="#D0E2FF" strokeOpacity=".24" strokeWidth=".7" />
+        </pattern>
       </defs>
 
       {/* Ombra a terra */}
@@ -73,12 +81,15 @@ export function Minion({
       />
       {/* Braç dret */}
       <path
-        d={variant === "gift" ? "M93 74 C108 74 112 88 106 96" : "M93 76 C108 80 112 96 106 108"}
+        d={variant === "gift" || variant === "phone" ? "M93 74 C108 74 112 88 106 96" : "M93 76 C108 80 112 96 106 108"}
         stroke="url(#mn-body)"
         strokeWidth="13"
         strokeLinecap="round"
         fill="none"
       />
+      {/* Guants foscos com a la referència; el lladre porta el sac a una mà */}
+      <ellipse cx="14" cy={variant === "wave" ? 29 : 108} rx="8" ry="7" fill="#232329" />
+      <ellipse cx="106" cy={variant === "gift" || variant === "phone" ? 96 : 108} rx="8" ry="7" fill="#232329" />
 
       {/* Cos càpsula */}
       <rect x="25" y="20" width="70" height="112" rx="35" fill="url(#mn-body)" />
@@ -86,36 +97,57 @@ export function Minion({
       <ellipse cx="44" cy="46" rx="13" ry="20" fill="#FFF7B8" opacity="0.45" />
       <path d="M92 44 C98 66 98 96 88 118 C96 108 98 74 92 44Z" fill="#B87F08" opacity="0.22" />
 
-      {/* Tira de les ulleres */}
-      <rect x="14" y="44" width="92" height="32" rx="16" fill="#7E8B9C" />
-      <rect x="14" y="44" width="92" height="10" rx="5" fill="#A9B6C6" opacity="0.7" />
+      {/* Uns quants cabells curts al cap, com a silueta del Minion */}
+      {variant !== "party" && !thief && (
+        <g fill="none" stroke="#5B4210" strokeWidth="2.6" strokeLinecap="round">
+          <path d="M49 23 C47 16 49 12 53 9" />
+          <path d="M59 21 C59 14 62 11 66 9" />
+          <path d="M68 23 C70 17 74 15 78 15" />
+        </g>
+      )}
+      {thief && (
+        <g>
+          {/* Gorro de lladre amb vora i un ble de cabell */}
+          <path d="M26 45 C24 23 39 10 60 10 C81 10 96 23 94 45 Z" fill="#282831" />
+          <path d="M25 41 Q60 35 95 41 L95 49 Q60 44 25 49 Z" fill="#17171C" />
+          <path d="M48 42 Q53 37 57 39" fill="none" stroke="#4B3C29" strokeWidth="2" strokeLinecap="round" />
+        </g>
+      )}
 
-      {/* Ulleres */}
-      <circle cx="43" cy="60" r="17" fill="url(#mn-glass)" />
-      <circle cx="77" cy="60" r="17" fill="url(#mn-glass)" />
-      <circle cx="43" cy="60" r="12" fill="url(#mn-eye)" />
-      <circle cx="77" cy="60" r="12" fill="url(#mn-eye)" />
+      {/* Corretja negra gruixuda, retallada a la silueta del cap (no en surt) */}
+      <g clipPath="url(#mn-body-clip)">
+        <rect x="20" y="51" width="80" height="18" fill="#17191E" />
+        <rect x="20" y="52" width="80" height="3" fill="#3A3F48" opacity="0.6" />
+      </g>
+
+      {/* Muntura fina amb ulls grans; les lents es toquen al mig (sense pont gris) */}
+      <circle cx="43" cy="60" r="16.5" fill="#515D6B" stroke="#252B33" strokeWidth="1.5" />
+      <circle cx="77" cy="60" r="16.5" fill="#515D6B" stroke="#252B33" strokeWidth="1.5" />
+      <circle cx="43" cy="60" r="14" fill="url(#mn-glass)" />
+      <circle cx="77" cy="60" r="14" fill="url(#mn-glass)" />
+      <circle cx="43" cy="60" r="12.5" fill="url(#mn-eye)" />
+      <circle cx="77" cy="60" r="12.5" fill="url(#mn-eye)" />
+      {/* Mirada mig entremaliada de la referència (els ulls continuen ben visibles) */}
+      <path d="M31 55 Q43 50 55 55 L55 59 Q43 55 31 59 Z" fill="#F5C73E" />
+      <path d="M65 55 Q77 50 89 55 L89 59 Q77 55 65 59 Z" fill="#F5C73E" />
 
       {/* Parpalleig: grup que s'aplana */}
       <g className="pestanya">
         {/* Pupils */}
         {wide ? (
           <>
-            <circle cx="43" cy="60" r="5.4" fill="#26263A" />
-            <circle cx="77" cy="60" r="5.4" fill="#26263A" />
+            <circle cx="43" cy="60" r="6.2" fill="#26263A" />
+            <circle cx="77" cy="60" r="6.2" fill="#26263A" />
           </>
         ) : (
           <>
-            <circle cx={variant === "defeat" ? 40 : 44} cy="61" r="5.6" fill="#26263A" />
-            <circle cx={variant === "defeat" ? 74 : 78} cy="61" r="5.6" fill="#26263A" />
+            <circle cx={variant === "defeat" ? 39 : 45} cy="61" r="6.6" fill="#26263A" />
+            <circle cx={variant === "defeat" ? 73 : 79} cy="61" r="6.6" fill="#26263A" />
           </>
         )}
-        <circle cx="41.4" cy="58" r="2" fill="#fff" opacity="0.9" />
-        <circle cx="75.4" cy="58" r="2" fill="#fff" opacity="0.9" />
+        <circle cx="42.5" cy="57.5" r="2.3" fill="#fff" opacity="0.9" />
+        <circle cx="76.5" cy="57.5" r="2.3" fill="#fff" opacity="0.9" />
       </g>
-
-      {/* Cell de l'ull dret */}
-      <rect x="62" y="46" width="6" height="28" rx="3" fill="#8C99A9" opacity="0.75" />
 
       {/* Bocs */}
       {variant === "defeat" ? (
@@ -162,11 +194,30 @@ export function Minion({
 
       {/* Petó */}
       <path d="M32 92 L32 118 Q32 132 44 132 L76 132 Q88 132 88 118 L88 92 Z" fill="url(#mn-overall)" />
+      <path d="M32 92 L32 118 Q32 132 44 132 L76 132 Q88 132 88 118 L88 92 Z" fill="url(#mn-denim)" />
+      {/* Tirants als costats del cos, inclinats cap a les cantonades del petó (lluny de la boca) */}
+      <g clipPath="url(#mn-body-clip)">
+        <path d="M24 74 L38 96" stroke="#174B9A" strokeWidth="9" fill="none" strokeLinecap="round" />
+        <path d="M24 74 L38 96" stroke="#6FA8FF" strokeWidth="5" fill="none" strokeLinecap="round" />
+        <path d="M96 74 L82 96" stroke="#174B9A" strokeWidth="9" fill="none" strokeLinecap="round" />
+        <path d="M96 74 L82 96" stroke="#6FA8FF" strokeWidth="5" fill="none" strokeLinecap="round" />
+      </g>
       <path d="M34 96 L44 96 L40 132 L34 132 Z" fill="#2F6BD8" />
       <path d="M86 96 L76 96 L80 132 L86 132 Z" fill="#2F6BD8" />
       <rect x="50" y="112" width="20" height="16" rx="3" fill="#1F4FAF" />
-      <circle cx="36" cy="98" r="2.6" fill="#FFD23F" />
-      <circle cx="84" cy="98" r="2.6" fill="#FFD23F" />
+      <path d="M51 113 H69 M51 127 H69" fill="none" stroke="#95B9EA" strokeWidth=".9" strokeDasharray="2 2" />
+      <circle cx="38" cy="97" r="3" fill="#FFD23F" stroke="#1F4FAF" strokeWidth="1.2" />
+      <circle cx="82" cy="97" r="3" fill="#FFD23F" stroke="#1F4FAF" strokeWidth="1.2" />
+
+      {thief && (
+        <g>
+          {/* Sac amb records robats, darrere del braç esquerre */}
+          <path d="M12 96 C0 100 0 121 13 130 C28 137 37 122 30 108 L21 98 Z" fill="#303038" stroke="#17171C" strokeWidth="2" />
+          <path d="M13 99 L22 99 L19 93 L15 93 Z" fill="#17171C" />
+          <path d="M9 108 Q15 104 24 107" fill="none" stroke="#74747D" strokeWidth="1.5" strokeLinecap="round" />
+          <text x="16" y="122" fontSize="11" textAnchor="middle" fill="#FFD23F">✦</text>
+        </g>
+      )}
 
       {/* Regal a les mans */}
       {variant === "gift" && (
@@ -176,6 +227,15 @@ export function Minion({
           <rect x="9" y="-2" width="5" height="24" fill="#FFD23F" />
           <path d="M8 -2 Q11 -10 14 -2" stroke="#FFD23F" strokeWidth="3" fill="none" />
           <path d="M21 -2 Q24 -10 27 -2" stroke="#FFD23F" strokeWidth="3" fill="none" />
+        </g>
+      )}
+      {variant === "phone" && (
+        <g transform="rotate(13 105 80)">
+          <rect x="96" y="55" width="20" height="39" rx="3.5" fill="#252830" />
+          <rect x="97.5" y="57" width="17" height="34" rx="2" fill="#F4F0E9" />
+          <circle cx="101" cy="62" r="1.7" fill="#414753" />
+          <circle cx="106" cy="62" r="1.7" fill="#414753" />
+          <path d="M98 87 L114 87" stroke="#B9B6B3" strokeWidth="1.2" />
         </g>
       )}
     </svg>

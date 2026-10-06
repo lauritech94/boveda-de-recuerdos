@@ -6,9 +6,6 @@ const KEY_MEM = `esferas_memorias_v${CONTENT_VERSION}`;
 const KEY_FINAL = `esferas_final_v${CONTENT_VERSION}`;
 const KEY_PROG = "esferas_progreso_v1";
 
-/** Camps que són feina manual vostra (mai els trepitja el codi). */
-const PERSONAL: (keyof Memory)[] = ["photo", "photoCaption", "message"];
-
 export type PublishedData = { memories: Partial<Memory>[]; final: Partial<FinalMemory>; v?: number };
 /** Dades llegides de recuerdos.json d'una versió anterior del codi (per avisar a l'editor). */
 let stalePublished = false;
@@ -27,7 +24,24 @@ export type FinalMemory = typeof FINAL_DEFAULT;
 type LegacyField = "title" | "when" | "hint" | "gameWhy";
 const LEGACY: Record<number, { fields?: Partial<Record<LegacyField, string[]>>; config?: Record<string, string[]> }> = {
   1: { fields: { title: ["La Càmera dels Records"], when: ["Missatge urgent"], gameWhy: ["Esfera d'inici: explica la història i les regles."] } },
-  2: { fields: { title: ["El dia que vas arribar"], when: ["El principi de tot"], hint: ["Tot va començar amb un número: l'any en què la família va créixer."], gameWhy: ["Endevinar l'any de naixement."] } },
+  2: {
+    fields: {
+      // Valors antics de la bola 2, inclòs l'últim intercanvi amb la bola 4.
+      title: ["El dia que vas arribar", "Plomes"],
+      when: ["El principi de tot", "Pensa-hi bé"],
+      hint: ["Tot va començar amb un número: l'any en què la família va créixer.", "Pensa-hi bé abans de respondre…"],
+      gameWhy: ["Endevinar l'any de naixement.", "Endevinalla: desxifra la connexió abans de continuar."],
+    },
+    config: { question: ["🪶 Un cap indi.\n\n🦜 Jack.\n\nQuè tenen en comú?"], answer: ["plomes,plumes,ploma,pluma"] },
+  },
+  4: {
+    fields: {
+      title: ["El nostre amagatall"],
+      when: ["Infància"],
+      hint: ["1, 2, 3… amagar! Compta fins a 30 sense fer trampes."],
+      gameWhy: ["Comptar de l'1 al 30 com quan jugàvem a amagar."],
+    },
+  },
   3: { config: { emojis: ["🍪,🧶,📻,🪴,🐓,☕"] } },
   5: { fields: { hint: ["Qui triava el canal de la tele? Que ho decideixi el duel de sempre."], gameWhy: ["Pedra, paper o tisora: així resolíeu les disputes."] } },
   6: { config: { bad: ["🪼"] } },
@@ -180,16 +194,12 @@ export async function loadPublished(): Promise<{ memories: Partial<Memory>[]; fi
     const v = typeof data.v === "number" ? data.v : 1;
     stalePublished = v < CONTENT_VERSION;
     if (!stalePublished) return { memories: data.memories, final: data.final || {}, v };
-    // JSON d'una versió anterior: només es respecta el que és feina manual vostra
-    // (foto, peu de foto i missatge). Títols, pistes i configs tornen al valor del codi.
+    // JSON d'una versió anterior: conserva els canvis que l'usuari va editar,
+    // però neteja valors antics coneguts. El gameKey continuarà sent decidit per
+    // memories.ts tret que el canvi s'hagi fet explícitament des del desplegable.
     const mems = (data.memories as Partial<Memory>[])
-      .map((o) => {
-        if (!o || typeof o.id !== "number") return null;
-        const out: Partial<Memory> = { id: o.id };
-        PERSONAL.forEach((k) => { if (o[k] !== undefined) (out as Record<string, unknown>)[k as string] = o[k]; });
-        return out;
-      })
-      .filter((x): x is Partial<Memory> => x !== null);
+      .map((o) => cleanLegacy(o))
+      .filter((x): x is Partial<Memory> => !!x && typeof x.id === "number");
     const fin: Partial<FinalMemory> = {};
     if (data.final) fin.photo = data.final.photo;
     return { memories: mems, final: fin, v };
