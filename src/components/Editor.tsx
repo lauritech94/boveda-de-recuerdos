@@ -3,7 +3,7 @@ import { X, Download, Upload, ImagePlus, ChevronDown, ChevronUp, Printer, Trash2
 import { EMOTIONS, EmotionKey, FINAL_DEFAULT, Memory, MemoryKind } from "../data/memories";
 import { GAME_DEFS, GAME_KEYS } from "../games/registry";
 import { Sphere } from "./Sphere";
-import { exportAll, fileToDataUrl, importAll, loadPublished, onSaveStatus, publishedIsStale, flushLocal, Progress } from "../data/store";
+import { exportAll, fileToDataUrl, importAll, loadPublished, onSaveStatus, publishedIsStale, flushLocal, hasLocalOverrides, getLocalBaseSig, clearLocalOverrides, Progress } from "../data/store";
 
 type Props = {
   memories: Memory[];
@@ -181,6 +181,8 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
   const [stale, setStale] = useState(false);
   // Avís de desat: mai bloqueja, només informa (abans sortia un alert en cada lletra)
   const [saveWarn, setSaveWarn] = useState(false);
+  // Quina versió es veu: la publicada o canvis locals encara sense publicar
+  const [localPending, setLocalPending] = useState(false);
   useEffect(() => {
     loadPublished().then((pub) => {
       const map: Record<number, string> = {};
@@ -188,6 +190,7 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
       setPubPhotos(map);
       setPubFinalPhoto(pub?.final?.photo || "");
       setStale(publishedIsStale());
+      setLocalPending(!!pub && hasLocalOverrides() && getLocalBaseSig() === pub.sig);
     });
   }, []);
 
@@ -264,6 +267,23 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
         {totalUnpublished === 0 && pubPhotos !== null && memories.some((m) => !!m.photo) && (
           <div className="mb-4 rounded-2xl border border-emerald-300/30 bg-emerald-400/10 px-4 py-2 text-xs font-bold text-emerald-200">✅ Todas las fotos de este panel ya están en <code>recuerdos.json</code> publicado.</div>
         )}
+
+        {/* QUINA VERSIÓ ES VEU */}
+        <div className={`mb-4 rounded-2xl border p-3 text-xs font-semibold ${localPending ? "border-sky-300/40 bg-sky-300/10 text-sky-100" : "border-emerald-300/30 bg-emerald-400/10 text-emerald-100"}`}>
+          {localPending ? (
+            <>
+              ✏️ <b>Estàs veient canvis teus encara no publicats.</b> Els altres navegadors no els veuran fins que exportis i pugis el <code>recuerdos.json</code>.
+              <button
+                onClick={() => { if (confirm("Descartar els canvis d'aquest navegador i carregar la versió publicada?")) { clearLocalOverrides(); window.location.reload(); } }}
+                className="ml-2 underline"
+              >
+                Descartar i veure la publicada
+              </button>
+            </>
+          ) : (
+            <>✅ <b>Estàs veient la versió publicada</b> (<code>recuerdos.json</code>). Si fas canvis, exporta i puja el JSON perquè els vegin els altres.</>
+          )}
+        </div>
 
         {/* COMPROVACIÓ DE LES IMATGES DELS MINIONS */}
         <div className="mb-4 rounded-2xl border border-yellow-300/30 bg-yellow-300/10 p-4">

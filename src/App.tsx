@@ -4,7 +4,7 @@ import { APP_NAME, DEFAULT_MEMORIES, EMOTIONS, EmotionKey, FINAL_DEFAULT, Memory
 import {
   loadMemories, saveMemories, loadFinal, saveFinal, loadProgress, saveProgress, resetProgress,
   loadPublished, applyMemoryOverrides, loadLocalMemoryOverrides, loadLocalFinalOverride, mergeFinal,
-  getLocalSavedAt, clearLocalOverrides, Progress,
+  getLocalBaseSig, hasLocalOverrides, clearLocalOverrides, Progress,
 } from "./data/store";
 import { Sphere } from "./components/Sphere";
 import { MemoryExperience } from "./components/MemoryExperience";
@@ -102,11 +102,11 @@ export default function App() {
       .then((pub) => {
         if (!pub) return;
         const base = applyMemoryOverrides(DEFAULT_MEMORIES, pub.memories);
-        // Guanya la versió més recent: si el JSON publicat s'ha exportat DESPRÉS de l'últim
-        // canvi local d'aquest navegador, la còpia local és vella i s'esborra.
-        const localAt = getLocalSavedAt();
-        const publishedIsNewer = !!pub.exportedAt && localAt <= pub.exportedAt;
-        if (publishedIsNewer) {
+        // Si el recuerdos.json publicat NO és el que servia de base als canvis locals
+        // (algú n'ha publicat un de nou, o la còpia local és d'abans d'aquest sistema),
+        // la còpia local és obsoleta: s'esborra i es mostra el publicat.
+        const localIsStale = hasLocalOverrides() && getLocalBaseSig() !== pub.sig;
+        if (localIsStale) {
           clearLocalOverrides();
           setMemories(base);
           setFinal(mergeFinal(pub.final));

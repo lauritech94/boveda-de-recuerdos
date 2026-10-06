@@ -10,18 +10,41 @@ const KEY_PHOTO = `esferas_foto_v${CONTENT_VERSION}`;
 const KEY_FINAL_TXT = `esferas_final_txt_v${CONTENT_VERSION}`;
 const KEY_FINAL_PHOTO = `esferas_final_foto_v${CONTENT_VERSION}`;
 const KEY_PROG = "esferas_progreso_v1";
-/** Moment de l'últim canvi desat al panell en aquest navegador. */
-const KEY_SAVED_AT = `esferas_saved_at_v${CONTENT_VERSION}`;
+/** Empremta del recuerdos.json sobre el qual es van fer els canvis locals d'aquest navegador.
+ *  Si el JSON publicat canvia (algú n'ha pujat un de nou), la còpia local queda obsoleta
+ *  i es descarta automàticament. Això funciona fins i tot amb JSON antics sense data. */
+const KEY_BASE_SIG = `esferas_base_sig_v${CONTENT_VERSION}`;
 
-export function getLocalSavedAt(): number {
-  try { return Number(localStorage.getItem(KEY_SAVED_AT) || 0); } catch { return 0; }
+/** Empremta del recuerdos.json carregat ara mateix. */
+let publishedSig = "";
+
+/** Hash curt i ràpid d'un text (només per detectar canvis, no és criptogràfic). */
+function hashText(text: string): string {
+  let h = 5381;
+  for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) | 0;
+  return `${text.length}-${(h >>> 0).toString(36)}`;
 }
+
+/** Hi ha canvis del panell guardats en aquest navegador? */
+export function hasLocalOverrides(): boolean {
+  try {
+    return [KEY_TXT, KEY_PHOTO, KEY_FINAL_TXT, KEY_FINAL_PHOTO].some((k) => localStorage.getItem(k) !== null);
+  } catch {
+    return false;
+  }
+}
+/** Empremta guardada de la versió publicada que servia de base als canvis locals. */
+export function getLocalBaseSig(): string {
+  try { return localStorage.getItem(KEY_BASE_SIG) || ""; } catch { return ""; }
+}
+/** En desar un canvi local, es recorda sobre quina versió publicada s'ha fet. */
 function markSaved() {
-  try { localStorage.setItem(KEY_SAVED_AT, String(Date.now())); } catch { /* ignorat */ }
+  if (!publishedSig) return; // encara no s'ha carregat el JSON: es conserva la base anterior
+  try { localStorage.setItem(KEY_BASE_SIG, publishedSig); } catch { /* ignorat */ }
 }
 /** Esborra la còpia local del panell (textos i fotos), NO el progrés del joc. */
 export function clearLocalOverrides() {
-  [KEY_TXT, KEY_PHOTO, KEY_FINAL_TXT, KEY_FINAL_PHOTO, KEY_SAVED_AT].forEach((k) => {
+  [KEY_TXT, KEY_PHOTO, KEY_FINAL_TXT, KEY_FINAL_PHOTO, KEY_BASE_SIG].forEach((k) => {
     try { localStorage.removeItem(k); } catch { /* ignorat */ }
   });
 }
@@ -285,19 +308,22 @@ if (typeof window !== "undefined") {
 
 /* ---------- Contenido publicado en la web (public/recuerdos.json) ---------- */
 
-export async function loadPublished(): Promise<{ memories: Partial<Memory>[]; final: Partial<FinalMemory>; v?: number; exportedAt?: number } | null> {
+export async function loadPublished(): Promise<{ memories: Partial<Memory>[]; final: Partial<FinalMemory>; v?: number; sig: string } | null> {
   try {
-    const url = new URL("recuerdos.json", window.location.href).toString();
+    // ?t=… evita la memòria cau de GitHub Pages (fins a 10 min): sempre arriba l'última versió
+    const url = new URL(`recuerdos.json?t=${Date.now()}`, window.location.href).toString();
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) return null;
     const type = res.headers.get("content-type") || "";
-    if (!type.includes("json")) return null; // el servidor devolvió el index.html de fallback
-    const data = await res.json();
+    if (!type.includes("json")) return null; // el servidor ha retornat l'index.html de reserva
+    const text = await res.text();
+    const data = JSON.parse(text);
     if (!data || !Array.isArray(data.memories)) return null;
+    const sig = hashText(text);
+    publishedSig = sig;
     const v = typeof data.v === "number" ? data.v : 1;
-    const exportedAt = typeof data.exportedAt === "number" ? data.exportedAt : 0;
     stalePublished = v < CONTENT_VERSION;
-    if (!stalePublished) return { memories: data.memories, final: data.final || {}, v, exportedAt };
+    if (!stalePublished) return { memories: data.memories, final: data.final || {}, v, sig };
     // JSON d'una versió anterior: conserva els canvis que l'usuari va editar,
     // però neteja valors antics coneguts. El gameKey continuarà sent decidit per
     // memories.ts tret que el canvi s'hagi fet explícitament des del desplegable.
@@ -306,7 +332,7 @@ export async function loadPublished(): Promise<{ memories: Partial<Memory>[]; fi
       .filter((x): x is Partial<Memory> => !!x && typeof x.id === "number");
     const fin: Partial<FinalMemory> = {};
     if (data.final) fin.photo = data.final.photo;
-    return { memories: mems, final: fin, v, exportedAt };
+    return { memories: mems, final: fin, v, sig };
   } catch {
     return null;
   }
@@ -359,9 +385,14 @@ export function exportAll(memories: Memory[], final: FinalMemory, filename = "re
     })
     .filter((x): x is Partial<Memory> & { id: number } => x !== null);
   const finalDiff = pickDiff(FINAL_DEFAULT, final, [...FINAL_KEYS] as unknown as (keyof typeof FINAL_DEFAULT)[]);
-  // exportedAt: permet que el JSON publicat guanyi a les còpies locals més antigues d'altres navegadors
   const payload = { v: CONTENT_VERSION, exportedAt: Date.now(), memories: diff, final: finalDiff };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const text = JSON.stringify(payload, null, 2);
+  // Només el recuerdos.json principal (no les còpies de seguretat): quan el publiquis,
+  // l'empremta coincidirà i aquest navegador conservarà els seus canvis.
+  if (filename === "recuerdos.json") {
+    try { localStorage.setItem(KEY_BASE_SIG, hashText(text)); } catch { /* ignorat */ }
+  }
+  const blob = new Blob([text], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = filename;
