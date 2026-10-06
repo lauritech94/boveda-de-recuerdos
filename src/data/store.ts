@@ -10,6 +10,21 @@ const KEY_PHOTO = `esferas_foto_v${CONTENT_VERSION}`;
 const KEY_FINAL_TXT = `esferas_final_txt_v${CONTENT_VERSION}`;
 const KEY_FINAL_PHOTO = `esferas_final_foto_v${CONTENT_VERSION}`;
 const KEY_PROG = "esferas_progreso_v1";
+/** Moment de l'últim canvi desat al panell en aquest navegador. */
+const KEY_SAVED_AT = `esferas_saved_at_v${CONTENT_VERSION}`;
+
+export function getLocalSavedAt(): number {
+  try { return Number(localStorage.getItem(KEY_SAVED_AT) || 0); } catch { return 0; }
+}
+function markSaved() {
+  try { localStorage.setItem(KEY_SAVED_AT, String(Date.now())); } catch { /* ignorat */ }
+}
+/** Esborra la còpia local del panell (textos i fotos), NO el progrés del joc. */
+export function clearLocalOverrides() {
+  [KEY_TXT, KEY_PHOTO, KEY_FINAL_TXT, KEY_FINAL_PHOTO, KEY_SAVED_AT].forEach((k) => {
+    try { localStorage.removeItem(k); } catch { /* ignorat */ }
+  });
+}
 
 export type PublishedData = { memories: Partial<Memory>[]; final: Partial<FinalMemory>; v?: number };
 /** Dades llegides de recuerdos.json d'una versió anterior del codi (per avisar a l'editor). */
@@ -210,6 +225,7 @@ function writeMemories(list: Memory[]): SaveStatus {
   try { localStorage.setItem(KEY_PHOTO, JSON.stringify(photos)); }
   catch { photoOk = false; try { localStorage.removeItem(KEY_PHOTO); } catch { /* res a fer */ } }
 
+  if (txtOk) markSaved();
   return { scope: "memories", ok: txtOk && photoOk, stripped: !photoOk };
 }
 
@@ -222,6 +238,7 @@ function writeFinal(f: FinalMemory): SaveStatus {
   try { localStorage.setItem(KEY_FINAL_PHOTO, JSON.stringify({ photo: photo || "" })); }
   catch { photoOk = false; try { localStorage.removeItem(KEY_FINAL_PHOTO); } catch { /* res a fer */ } }
 
+  if (txtOk) markSaved();
   return { scope: "final", ok: txtOk && photoOk, stripped: !photoOk };
 }
 
@@ -268,7 +285,7 @@ if (typeof window !== "undefined") {
 
 /* ---------- Contenido publicado en la web (public/recuerdos.json) ---------- */
 
-export async function loadPublished(): Promise<{ memories: Partial<Memory>[]; final: Partial<FinalMemory>; v?: number } | null> {
+export async function loadPublished(): Promise<{ memories: Partial<Memory>[]; final: Partial<FinalMemory>; v?: number; exportedAt?: number } | null> {
   try {
     const url = new URL("recuerdos.json", window.location.href).toString();
     const res = await fetch(url, { cache: "no-store" });
@@ -278,8 +295,9 @@ export async function loadPublished(): Promise<{ memories: Partial<Memory>[]; fi
     const data = await res.json();
     if (!data || !Array.isArray(data.memories)) return null;
     const v = typeof data.v === "number" ? data.v : 1;
+    const exportedAt = typeof data.exportedAt === "number" ? data.exportedAt : 0;
     stalePublished = v < CONTENT_VERSION;
-    if (!stalePublished) return { memories: data.memories, final: data.final || {}, v };
+    if (!stalePublished) return { memories: data.memories, final: data.final || {}, v, exportedAt };
     // JSON d'una versió anterior: conserva els canvis que l'usuari va editar,
     // però neteja valors antics coneguts. El gameKey continuarà sent decidit per
     // memories.ts tret que el canvi s'hagi fet explícitament des del desplegable.
@@ -288,7 +306,7 @@ export async function loadPublished(): Promise<{ memories: Partial<Memory>[]; fi
       .filter((x): x is Partial<Memory> => !!x && typeof x.id === "number");
     const fin: Partial<FinalMemory> = {};
     if (data.final) fin.photo = data.final.photo;
-    return { memories: mems, final: fin, v };
+    return { memories: mems, final: fin, v, exportedAt };
   } catch {
     return null;
   }
@@ -341,7 +359,8 @@ export function exportAll(memories: Memory[], final: FinalMemory, filename = "re
     })
     .filter((x): x is Partial<Memory> & { id: number } => x !== null);
   const finalDiff = pickDiff(FINAL_DEFAULT, final, [...FINAL_KEYS] as unknown as (keyof typeof FINAL_DEFAULT)[]);
-  const payload = { v: CONTENT_VERSION, memories: diff, final: finalDiff };
+  // exportedAt: permet que el JSON publicat guanyi a les còpies locals més antigues d'altres navegadors
+  const payload = { v: CONTENT_VERSION, exportedAt: Date.now(), memories: diff, final: finalDiff };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);

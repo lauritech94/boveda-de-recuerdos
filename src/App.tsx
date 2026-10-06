@@ -3,7 +3,8 @@ import confetti from "canvas-confetti";
 import { APP_NAME, DEFAULT_MEMORIES, EMOTIONS, EmotionKey, FINAL_DEFAULT, Memory } from "./data/memories";
 import {
   loadMemories, saveMemories, loadFinal, saveFinal, loadProgress, saveProgress, resetProgress,
-  loadPublished, applyMemoryOverrides, loadLocalMemoryOverrides, loadLocalFinalOverride, mergeFinal, Progress,
+  loadPublished, applyMemoryOverrides, loadLocalMemoryOverrides, loadLocalFinalOverride, mergeFinal,
+  getLocalSavedAt, clearLocalOverrides, Progress,
 } from "./data/store";
 import { Sphere } from "./components/Sphere";
 import { MemoryExperience } from "./components/MemoryExperience";
@@ -101,8 +102,18 @@ export default function App() {
       .then((pub) => {
         if (!pub) return;
         const base = applyMemoryOverrides(DEFAULT_MEMORIES, pub.memories);
-        setMemories(applyMemoryOverrides(base, loadLocalMemoryOverrides()));
-        setFinal(mergeFinal(pub.final, loadLocalFinalOverride()));
+        // Guanya la versió més recent: si el JSON publicat s'ha exportat DESPRÉS de l'últim
+        // canvi local d'aquest navegador, la còpia local és vella i s'esborra.
+        const localAt = getLocalSavedAt();
+        const publishedIsNewer = !!pub.exportedAt && localAt <= pub.exportedAt;
+        if (publishedIsNewer) {
+          clearLocalOverrides();
+          setMemories(base);
+          setFinal(mergeFinal(pub.final));
+        } else {
+          setMemories(applyMemoryOverrides(base, loadLocalMemoryOverrides()));
+          setFinal(mergeFinal(pub.final, loadLocalFinalOverride()));
+        }
       })
       .catch(() => { /* sense recuerdos.json es fa servir el codi */ })
       .then(() => setReady(true));
