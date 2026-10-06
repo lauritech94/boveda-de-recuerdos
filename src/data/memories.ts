@@ -27,6 +27,12 @@ export type Memory = {
 
 export const APP_NAME = "La Càmera dels Records";
 
+/** 🔄 VERSIÓ DEL CONTINGUT (títols, pistes, textos per defecte, jocs).
+ *  Puja aquest número CADA COP que es canviï un text o un joc a aquest fitxer.
+ *  Serveix perquè el navegador descarti les còpies velles guardades al panell i a
+ *  recuerdos.json i mostri sempre els textos nous. Sense això, surten els antics. */
+export const CONTENT_VERSION = 6;
+
 /** Targeta d'inici (l'enllaç principal, sense ?bola=). No és cap esfera. Editable des del panell. */
 export const HOME_TEXT_DEFAULT = `Aquesta nit, un Minion molt trapella ha volgut robar-te els teus records.
 

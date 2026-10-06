@@ -3,7 +3,7 @@ import { X, Download, Upload, ImagePlus, ChevronDown, ChevronUp, Printer, Trash2
 import { EMOTIONS, EmotionKey, FINAL_DEFAULT, Memory, MemoryKind } from "../data/memories";
 import { GAME_DEFS, GAME_KEYS } from "../games/registry";
 import { Sphere } from "./Sphere";
-import { exportAll, fileToDataUrl, importAll, loadPublished, Progress } from "../data/store";
+import { exportAll, fileToDataUrl, importAll, loadPublished, publishedIsStale, Progress } from "../data/store";
 
 type Props = {
   memories: Memory[];
@@ -149,12 +149,14 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
   // Fotos publicades a public/recuerdos.json (per detectar les que només existeixen en aquest navegador)
   const [pubPhotos, setPubPhotos] = useState<Record<number, string> | null>(null);
   const [pubFinalPhoto, setPubFinalPhoto] = useState<string | null>(null);
+  const [stale, setStale] = useState(false);
   useEffect(() => {
     loadPublished().then((pub) => {
       const map: Record<number, string> = {};
       (pub?.memories || []).forEach((x) => { if (x && typeof x.id === "number") map[x.id] = x.photo || ""; });
       setPubPhotos(map);
       setPubFinalPhoto(pub?.final?.photo || "");
+      setStale(publishedIsStale());
     });
   }, []);
   const unpublished = (m: Memory) => !!m.photo && pubPhotos !== null && pubPhotos[m.id] !== m.photo;
@@ -183,6 +185,15 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
       </div>
 
       <div className="mx-auto max-w-5xl px-4 py-5">
+        {/* AVÍS: recuerdos.json d'una versió anterior */}
+        {stale && (
+          <div className="mb-4 rounded-2xl border-2 border-sky-300 bg-sky-300/15 p-4">
+            <p className="font-black text-sky-200">ℹ️ El <code>recuerdos.json</code> publicat és d'una versió anterior del codi</p>
+            <p className="mt-1 text-xs font-semibold text-white/70">S'han aplicat les <b>fotos, peus de foto i missatges</b> que hi havia. Els <b>títols, pistes i textos</b> han tornat als valors nous del codi. Si vols mantenir canvis de text que vas fer al panell, torna'ls a escriure aquí i prem <b>Exportar recuerdos.json</b>.</p>
+            <button onClick={() => exportAll(memories, final)} className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-sky-300 px-3 py-2 text-xs font-black text-stone-900 hover:bg-sky-200"><Download className="h-4 w-4" /> Regenerar recuerdos.json</button>
+          </div>
+        )}
+
         {/* AVÍS: fotos sense publicar */}
         {totalUnpublished > 0 && (
           <div className="mb-4 rounded-2xl border-2 border-amber-300 bg-amber-300/15 p-4">
@@ -224,9 +235,6 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
             <li>Pulsa <b>Exportar recuerdos.json</b> y guarda el archivo como <code className="text-emerald-300">public/recuerdos.json</code> en el proyecto → sube a GitHub.</li>
             <li>Graba en cada NFC la URL de su esfera (<code className="text-emerald-300">?bola=N</code>).</li>
           </ol>
-          <p className="mt-2 rounded-lg bg-amber-300/10 px-3 py-2 text-xs font-semibold text-amber-100">
-            💡 <b>Tus textos y fotos siempre mandan.</b> Si en el código se cambia el texto por defecto de una esfera que tú no has tocado, verás el nuevo. Si tú lo habías reescrito, se respeta el tuyo.
-          </p>
           <p className="mt-2 text-xs text-white/40">Esferas listas: {memories.filter(ready).length}/30</p>
         </div>
 

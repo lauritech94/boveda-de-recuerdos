@@ -1,8 +1,20 @@
-import { DEFAULT_MEMORIES, FINAL_DEFAULT, Memory } from "./memories";
+import { CONTENT_VERSION, DEFAULT_MEMORIES, FINAL_DEFAULT, Memory } from "./memories";
 
-const KEY_MEM = "esferas_memorias_v1";
-const KEY_FINAL = "esferas_final_v1";
+/** Les claus inclouen la versió del contingut: si canvio un text o un joc al codi i pujo
+ *  CONTENT_VERSION, les còpies velles guardades al panell deixen de tenir efecte automàticament. */
+const KEY_MEM = `esferas_memorias_v${CONTENT_VERSION}`;
+const KEY_FINAL = `esferas_final_v${CONTENT_VERSION}`;
 const KEY_PROG = "esferas_progreso_v1";
+
+/** Camps que són feina manual vostra (mai els trepitja el codi). */
+const PERSONAL: (keyof Memory)[] = ["photo", "photoCaption", "message"];
+
+export type PublishedData = { memories: Partial<Memory>[]; final: Partial<FinalMemory>; v?: number };
+/** Dades llegides de recuerdos.json d'una versió anterior del codi (per avisar a l'editor). */
+let stalePublished = false;
+export function publishedIsStale() {
+  return stalePublished;
+}
 
 export type Progress = Record<number, { label: string; date: string }>;
 export type FinalMemory = typeof FINAL_DEFAULT;
@@ -83,97 +95,26 @@ function cleanLegacy(o: Partial<Memory> | undefined): Partial<Memory> | undefine
   return c;
 }
 
-/* ---------- Fusió a tres bandes (codi · desat · edició) ----------
- *  Cada canvi desat guarda també quin era el text del codi en aquell moment (`_base`).
- *  En carregar: si el text del codi ja no és el mateix que `_base`, vol dir que s'ha
- *  canviat el codi DESPRÉS del desat → mana el codi. Si coincideix, mana la vostra edició.
- *  Així, canviar un text a memories.ts ja no queda tapat per un recuerdos.json antic,
- *  i les vostres fotos i missatges no es perden mai.                                   */
-
-const MEM_FIELDS: (keyof Memory)[] = ["kind", "title", "emotion", "emotion2", "when", "hint", "gameKey", "gameWhy", "message", "photo", "photoCaption"];
-const FINAL_FIELDS: (keyof FinalMemory)[] = ["homeText", "title", "message", "photo"];
-
-type MemOverride = Partial<Memory> & { id: number; _base?: Record<string, any>; _baseConfig?: Record<string, any> };
-export type FinalOverride = Partial<FinalMemory> & { _base?: Record<string, any> };
-
-const same = (a: any, b: any) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
-
-/** Calcula què s'ha editat respecte del codi, desant-ne també el valor original. */
-export function computeOverrides(list: Memory[]): MemOverride[] {
-  const out: MemOverride[] = [];
-  list.forEach((m) => {
-    const def = DEFAULT_MEMORIES.find((d) => d.id === m.id);
-    if (!def) { out.push({ ...(m as MemOverride) }); return; }
-    const o: MemOverride = { id: m.id };
-    const b: Record<string, any> = {};
-    MEM_FIELDS.forEach((k) => {
-      if (!same(m[k], def[k])) { (o as any)[k] = m[k]; b[k as string] = def[k] ?? null; }
-    });
-    const cur = m.config || {}, dft = def.config || {};
-    const cfg: Record<string, any> = {}, cfgBase: Record<string, any> = {};
-    Object.keys(cur).forEach((k) => {
-      if (!same(cur[k], dft[k])) { cfg[k] = cur[k]; cfgBase[k] = dft[k] ?? null; }
-    });
-    if (Object.keys(cfg).length) { o.config = cfg; o._baseConfig = cfgBase; }
-    if (Object.keys(b).length) o._base = b;
-    if (Object.keys(o).length > 1) out.push(o);
-  });
-  return out;
-}
-
-export function computeFinalOverride(final: FinalMemory): FinalOverride {
-  const o: FinalOverride = {};
-  const b: Record<string, any> = {};
-  FINAL_FIELDS.forEach((k) => {
-    if (!same(final[k], FINAL_DEFAULT[k])) { (o as any)[k] = final[k]; b[k as string] = FINAL_DEFAULT[k] ?? null; }
-  });
-  if (Object.keys(b).length) o._base = b;
-  return o;
-}
-
-/** Aplica els canvis desats sobre la llista del codi. */
+/** Mezcla una lista base de recuerdos con cambios parciales (por id).
+ *  REGLA: el `gameKey` (qué minijuego tiene cada esfera) lo decide memories.ts.
+ *  Solo se respeta el de la capa guardada si se cambió desde el panel (config.__gameCustom).
+ *  Así un recuerdos.json antiguo nunca bloquea un cambio de juego hecho en el código. */
 export function applyMemoryOverrides(base: Memory[], over: Partial<Memory>[] = []): Memory[] {
   if (!Array.isArray(over) || over.length === 0) return base;
   return base.map((m) => {
-    const found = over.find((x) => x && x.id === m.id) as MemOverride | undefined;
-    if (!found) return m;
-    const o = cleanLegacy(found) as MemOverride;
-    const def = DEFAULT_MEMORIES.find((d) => d.id === m.id) || m;
-    const res: Memory = { ...m };
-
-    MEM_FIELDS.forEach((k) => {
-      if (!(k in o)) return;
-      // El joc el decideix el codi, tret que s'hagi triat expressament al panell
-      if (k === "gameKey" && (o.config as Record<string, any> | undefined)?.__gameCustom !== "1") return;
-      // Si el codi ha canviat des del desat, mana el codi
-      if (o._base && k in o._base && !same(o._base[k as string], def[k])) return;
-      (res as any)[k] = (o as any)[k];
-    });
-
-    const cfg: Record<string, any> = { ...(m.config || {}) };
-    Object.entries(o.config || {}).forEach(([k, v]) => {
-      if (o._baseConfig && k in o._baseConfig && !same(o._baseConfig[k], (def.config || {})[k])) return;
-      cfg[k] = v;
-    });
-    res.config = cfg;
-    return res;
+    const o = { ...(cleanLegacy(over.find((x) => x && x.id === m.id)) || {}) };
+    if ((o.config as Record<string, any> | undefined)?.__gameCustom !== "1") delete o.gameKey;
+    return { ...m, ...o, config: { ...(m.config || {}), ...(o.config || {}) } };
   });
 }
 
-/** Combina els textos de la pantalla d'inici i del missatge final. */
+/** Combina el text per defecte amb les capes desades. Descarta el text d'inici antic ("Benvinguda!…"). */
 export function mergeFinal(...parts: Partial<FinalMemory>[]): FinalMemory {
   const merged: FinalMemory = { ...FINAL_DEFAULT };
   parts.forEach((p) => {
     if (!p) return;
-    const o = p as FinalOverride;
     const c: Partial<FinalMemory> = { ...p };
-    delete (c as any)._base;
-    // Text d'inici per defecte d'una versió anterior: el descartem
     if (typeof c.homeText === "string" && /^Benvinguda!/.test(c.homeText.trim())) delete c.homeText;
-    FINAL_FIELDS.forEach((k) => {
-      if (!(k in c)) return;
-      if (o._base && k in o._base && !same(o._base[k as string], FINAL_DEFAULT[k])) { delete (c as any)[k]; return; }
-    });
     Object.assign(merged, c);
   });
   return merged;
@@ -208,18 +149,18 @@ export function loadFinal(): FinalMemory {
 
 export function saveMemories(list: Memory[]) {
   try {
-    localStorage.setItem(KEY_MEM, JSON.stringify(computeOverrides(list)));
+    localStorage.setItem(KEY_MEM, JSON.stringify(list));
   } catch {
     alert(
       "No se pudo guardar en este navegador: las fotos ocupan demasiado.\n\n" +
-        "Soluciones: usa rutas de imagen (fotos/01.jpg) en vez de subirlas, o exporta el JSON y publícalo como public/recuerdos.json."
+        "Soluciones: usa URLs de imagen en vez de subirlas, o exporta el JSON y publícalo como public/recuerdos.json."
     );
   }
 }
 
 export function saveFinal(f: FinalMemory) {
   try {
-    localStorage.setItem(KEY_FINAL, JSON.stringify(computeFinalOverride(f)));
+    localStorage.setItem(KEY_FINAL, JSON.stringify(f));
   } catch {
     /* ignorado: mismo motivo que arriba */
   }
@@ -227,7 +168,7 @@ export function saveFinal(f: FinalMemory) {
 
 /* ---------- Contenido publicado en la web (public/recuerdos.json) ---------- */
 
-export async function loadPublished(): Promise<{ memories: Partial<Memory>[]; final: Partial<FinalMemory> } | null> {
+export async function loadPublished(): Promise<{ memories: Partial<Memory>[]; final: Partial<FinalMemory>; v?: number } | null> {
   try {
     const url = new URL("recuerdos.json", window.location.href).toString();
     const res = await fetch(url, { cache: "no-store" });
@@ -236,7 +177,22 @@ export async function loadPublished(): Promise<{ memories: Partial<Memory>[]; fi
     if (!type.includes("json")) return null; // el servidor devolvió el index.html de fallback
     const data = await res.json();
     if (!data || !Array.isArray(data.memories)) return null;
-    return { memories: data.memories, final: data.final || {} };
+    const v = typeof data.v === "number" ? data.v : 1;
+    stalePublished = v < CONTENT_VERSION;
+    if (!stalePublished) return { memories: data.memories, final: data.final || {}, v };
+    // JSON d'una versió anterior: només es respecta el que és feina manual vostra
+    // (foto, peu de foto i missatge). Títols, pistes i configs tornen al valor del codi.
+    const mems = (data.memories as Partial<Memory>[])
+      .map((o) => {
+        if (!o || typeof o.id !== "number") return null;
+        const out: Partial<Memory> = { id: o.id };
+        PERSONAL.forEach((k) => { if (o[k] !== undefined) (out as Record<string, unknown>)[k as string] = o[k]; });
+        return out;
+      })
+      .filter((x): x is Partial<Memory> => x !== null);
+    const fin: Partial<FinalMemory> = {};
+    if (data.final) fin.photo = data.final.photo;
+    return { memories: mems, final: fin, v };
   } catch {
     return null;
   }
@@ -264,10 +220,32 @@ export function resetProgress() {
 
 /* ---------- Exportar / importar ---------- */
 
-/** Exporta NOMÉS el que s'ha editat al panell, amb el valor original de cada camp (`_base`).
- *  Així el recuerdos.json no tapa mai un canvi posterior fet al codi. */
+/** Només els camps que difereixen del valor per defecte del codi. */
+function pickDiff<T extends object>(base: T, cur: T, keys: (keyof T)[]): Partial<T> {
+  const out: Partial<T> = {};
+  keys.forEach((k) => {
+    if (JSON.stringify(base[k]) !== JSON.stringify(cur[k])) (out as Record<string, unknown>)[k as string] = cur[k];
+  });
+  return out;
+}
+
+const MEM_KEYS: (keyof Memory)[] = ["kind", "title", "emotion", "emotion2", "when", "hint", "gameKey", "gameWhy", "message", "photo", "photoCaption", "config"];
+const FINAL_KEYS = ["homeText", "title", "message", "photo"] as const;
+
+/** Exporta NOMÉS el que s'ha editat al panell. Així el recuerdos.json no tapa mai
+ *  els valors que venen de memories.ts (emojis, jocs per defecte…). */
 export function exportAll(memories: Memory[], final: FinalMemory, filename = "recuerdos.json") {
-  const payload = { v: 3, memories: computeOverrides(memories), final: computeFinalOverride(final) };
+  const diff = memories
+    .map((m) => {
+      const base = DEFAULT_MEMORIES.find((d) => d.id === m.id);
+      if (!base) return m as unknown as Partial<Memory> & { id: number };
+      const norm = (x: Memory) => ({ ...x, config: x.config && Object.keys(x.config).length ? x.config : undefined });
+      const d = pickDiff(norm(base), norm(m), MEM_KEYS);
+      return Object.keys(d).length ? { id: m.id, ...d } : null;
+    })
+    .filter((x): x is Partial<Memory> & { id: number } => x !== null);
+  const finalDiff = pickDiff(FINAL_DEFAULT, final, [...FINAL_KEYS] as unknown as (keyof typeof FINAL_DEFAULT)[]);
+  const payload = { v: CONTENT_VERSION, memories: diff, final: finalDiff };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
