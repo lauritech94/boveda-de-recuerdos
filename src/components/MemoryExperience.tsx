@@ -3,7 +3,7 @@ import confetti from "canvas-confetti";
 import { APP_NAME, EMOTIONS, Memory } from "../data/memories";
 import { GAME_DEFS } from "../games/registry";
 import { Sphere } from "./Sphere";
-import { Minion } from "./Minion";
+import { MinionImg } from "./MinionImg";
 import { GiftCharacter } from "./GiftCharacter";
 import { TypewriterText } from "./TypewriterText";
 import { playSound, vibrate, useSound } from "./useSound";
@@ -144,7 +144,7 @@ export function MemoryExperience({ memory: m, unlocked, unlockedCount, othersUnl
         <div className="relative mx-auto flex justify-center py-2">
           <Sphere emotion={m.emotion} emotion2={m.emotion2} size={120} pulse />
           <div className="absolute -bottom-2 -right-4">
-            <Minion variant="happy" size={70} anim="minion-anim" />
+            <MinionImg size={70} />
           </div>
         </div>
         <h1 className="titol mt-3" style={{ color: emo.text }}>Esfera desxifrada ✨</h1>
@@ -168,7 +168,7 @@ export function MemoryExperience({ memory: m, unlocked, unlockedCount, othersUnl
         <div className="relative mx-auto flex justify-center py-2">
           <div className="icono">🔒</div>
           <div className="absolute -right-2 top-0">
-            <Minion variant="sleepy" size={68} anim="minion-baluga" />
+            <MinionImg size={68} anim="minion-baluga" />
           </div>
         </div>
         <h1 className="titol">L'última esfera</h1>
@@ -199,7 +199,7 @@ Portes ${othersUnlocked} de 29. Et falten ${29 - othersUnlocked}.`}</section>
         <div className="relative flex items-center justify-center gap-3">
           {justOpened && <span className="flaix-obertura" style={{ background: emo.color }} />}
           <div className="icono">{isGift ? m.config?.giftEmoji || "🎁" : m.kind === "video" ? "🎬" : emo.emoji}</div>
-          {m.id === 10 ? <GiftCharacter src={m.config?.minionImage || "minions/iphone.png"} small /> : <Minion variant="party" size={60} anim="minion-salt" />}
+          {m.id === 10 ? <GiftCharacter src={m.config?.minionImage || "minions/iphone.png"} small /> : <MinionImg size={60} anim="minion-salt" />}
         </div>
 
         <h1 className="titol" style={{ color: emo.text }}>
@@ -290,7 +290,7 @@ Portes ${othersUnlocked} de 29. Et falten ${29 - othersUnlocked}.`}</section>
         {header}
         <div className="flex justify-center items-center gap-3">
           <div className="icono">✨</div>
-          {m.id === 10 ? <GiftCharacter src={m.config?.minionImage || "minions/iphone.png"} /> : <Minion variant="gift" size={76} anim="minion-anim" />}
+          {m.id === 10 ? <GiftCharacter src={m.config?.minionImage || "minions/iphone.png"} /> : <MinionImg size={76} />}
         </div>
         <h1 className="titol" style={{ color: emo.text }}>Esfera especial</h1>
         <p className="subtitulo">{m.when}</p>
@@ -329,7 +329,7 @@ Portes ${othersUnlocked} de 29. Et falten ${29 - othersUnlocked}.`}</section>
         {header}
         <div className="flex justify-center items-center gap-2">
           <div className="icono">🎬</div>
-          <Minion variant="party" size={72} anim="minion-salt" />
+          <MinionImg size={72} anim="minion-salt" />
         </div>
         <h1 className="titol" style={{ color: emo.text }}>L'última esfera</h1>
         <p className="subtitulo">Ho has aconseguit</p>
@@ -347,7 +347,7 @@ Portes ${othersUnlocked} de 29. Et falten ${29 - othersUnlocked}.`}</section>
         <div className="relative mx-auto flex justify-center py-2">
           <Sphere emotion={m.emotion} emotion2={m.emotion2} size={120} pulse />
           <div className="absolute -bottom-2 -right-3">
-            <Minion variant="sleepy" size={68} anim="minion-anim" />
+            <MinionImg size={68} />
           </div>
         </div>
 

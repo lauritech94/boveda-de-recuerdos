@@ -298,7 +298,15 @@ export function GameAnagram({ onComplete, config }: GameProps) {
     return parsed.length ? parsed.slice(0, 5) : ANAS;
   });
   const [idx, setIdx] = useState(0);
-  const [scrambled] = useState<string[][]>(() => LIST.map((a) => shuffle(a.word.split(""))));
+  const [scrambled] = useState<string[][]>(() => LIST.map((a) => {
+    // Barreja garantida: re-barreja fins que la paraula no surti ja ordenada
+    const letters = a.word.split("");
+    let s = shuffle(letters);
+    let guard = 0;
+    while (s.join("") === letters.join("") && guard++ < 60) s = shuffle(letters);
+    if (s.join("") === letters.join("")) s = [...letters].reverse();
+    return s;
+  }));
   const [built, setBuilt] = useState<string[]>([]);
   const [used, setUsed] = useState<number[]>([]);
   const [score, setScore] = useState(0);

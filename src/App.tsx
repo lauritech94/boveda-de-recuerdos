@@ -9,7 +9,7 @@ import { Sphere } from "./components/Sphere";
 import { MemoryExperience } from "./components/MemoryExperience";
 import { Editor } from "./components/Editor";
 import { PrintSheets } from "./components/PrintSheets";
-import { Minion } from "./components/Minion";
+import { MinionImg } from "./components/MinionImg";
 import { useSound, playSound } from "./components/useSound";
 import { Volume2, VolumeX, Sparkles } from "lucide-react";
 
@@ -151,7 +151,7 @@ export default function App() {
   // perquè si es van escanejant boles seguides mai es torna a l'inici.
   const minionOverlay = minionComment && (
     <div className="minion-toast" onClick={() => setMinionComment(null)}>
-      <Minion variant="happy" size={56} anim="minion-salt" />
+      <MinionImg size={56} anim="minion-salt" />
       <p>{minionComment}</p>
     </div>
   );
@@ -165,7 +165,7 @@ export default function App() {
           {active ? (
             <Sphere emotion={active.emotion} emotion2={active.emotion2} size={110} pulse />
           ) : (
-            <div className="animate-floaty"><Minion variant="happy" size={110} /></div>
+            <div className="animate-floaty"><MinionImg size={110} /></div>
           )}
           <h1 className="titol mt-5">{active ? `Esfera ${pad(active.id)}` : APP_NAME}</h1>
           <p className="subtitulo">Obrint la càmera dels records…</p>
@@ -219,11 +219,7 @@ export default function App() {
 
         {/* Minion que saluda a la capçalera */}
         <div className="relative mx-auto my-1 flex justify-center">
-          <Minion
-            variant="happy"
-            size={90}
-            anim={allDone ? "minion-salt" : "minion-anim"}
-          />
+          <MinionImg size={90} anim={allDone ? "minion-salt" : "minion-anim"} />
         </div>
 
         <h1 className="titol">{APP_NAME}</h1>
@@ -247,8 +243,8 @@ export default function App() {
           </div>
         )}
 
-        {/* Explicació inicial */}
-        <section className="pista">{final.homeText}</section>
+        {/* Explicació inicial: desapareix quan les 30 esferes ja estan recuperades */}
+        {!allDone && <section className="pista">{final.homeText}</section>}
 
         <div className="final">
           {allDone ? "💛 Gràcies per recuperar-los tots." : "🔍 Busca la primera esfera per a començar l'aventura."}

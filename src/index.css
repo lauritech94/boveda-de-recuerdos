@@ -329,6 +329,14 @@ body {
 
 /* ---- Minion ---- */
 .minion { display: block; overflow: visible; }
+.minion-img {
+  display: block;
+  height: auto;
+  max-width: 100%;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
 .minion-anim { animation: minion-float 4.2s ease-in-out infinite; transform-origin: 50% 100%; }
 @keyframes minion-float {
   0%, 100% { transform: translateY(0) rotate(0deg); }
