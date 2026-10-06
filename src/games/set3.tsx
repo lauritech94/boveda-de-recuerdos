@@ -396,17 +396,22 @@ export function GameFlash({ onComplete, config }: GameProps) {
 }
 
 /* DAU 21 */
-/* Dau dibuixat amb punts (els símbols ⚀⚁⚂… es veuen malament en molts mòbils) */
+/* Dau dibuixat amb punts (els símbols ⚀⚂… es veuen malament en molts mòbils).
+ * Totes les mides en píxels calculats a partir de `size`: el padding percentual
+ * es calcula sobre el pare (no el dau) i deixava els punts minúsculs. */
 const PIPS: Record<number, number[]> = { 1: [4], 2: [2, 6], 3: [2, 4, 6], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
-function Die({ v, size = 44 }: { v: number; size?: number }) {
+function Die({ v, size = 56 }: { v: number; size?: number }) {
+  const pip = Math.round(size * 0.16);
   return (
     <span
-      className="animate-pop-in inline-grid shrink-0 grid-cols-3 grid-rows-3 rounded-lg bg-white p-[13%] shadow-md ring-1 ring-black/10"
-      style={{ width: size, height: size }}
+      className="animate-pop-in grid shrink-0 place-items-center rounded-xl bg-white shadow-md ring-2 ring-stone-300"
+      style={{ width: size, height: size, gridTemplateColumns: "repeat(3, 1fr)", gridTemplateRows: "repeat(3, 1fr)", padding: Math.round(size * 0.12) }}
+      role="img"
+      aria-label={`Dau ${v}`}
     >
       {Array.from({ length: 9 }).map((_, i) => (
         <span key={i} className="flex items-center justify-center">
-          {(PIPS[v] || []).includes(i) && <span className="block h-[62%] w-[62%] rounded-full bg-stone-800" />}
+          {(PIPS[v] || []).includes(i) && <span className="rounded-full bg-stone-900" style={{ width: pip, height: pip }} />}
         </span>
       ))}
     </span>
@@ -553,26 +558,37 @@ export function GameRiddle({ onComplete, config }: GameProps) {
   );
 }
 
-/* EL GLOBUS: toca'l per no deixar-lo caure 20 segons */
+/* EL GLOBUS: toca'l per no deixar-lo caure 20 segons.
+ * El moviment es dibuixa canviant directament el `transform` (GPU), sense passar
+ * per l'estat de React en cada fotograma: així va fluid fins i tot en mòbils lents. */
 export function GameBalloon({ onComplete, config }: GameProps) {
   const EMO = String(config?.emoji || "🎈");
   const NEED = 20;
   const boxRef = useRef<HTMLDivElement>(null);
+  const balloonRef = useRef<HTMLButtonElement>(null);
   const [phase, setPhase] = useState<"idle" | "play" | "won" | "lost">("idle");
   const [secs, setSecs] = useState(NEED);
-  const [pos, setPos] = useState({ x: 50, y: 40 });
   const phaseRef = useRef(phase);
   const posRef = useRef({ x: 50, y: 40 });
-  const velRef = useRef({ x: 18, y: -40 });
+  const velRef = useRef({ x: 22, y: -55 });
   phaseRef.current = phase;
+
+  const paint = () => {
+    const box = boxRef.current;
+    const el = balloonRef.current;
+    if (!box || !el) return;
+    const px = (posRef.current.x / 100) * box.clientWidth;
+    const py = (posRef.current.y / 100) * box.clientHeight;
+    el.style.transform = `translate3d(${px}px, ${py}px, 0) translate(-50%, -50%)`;
+  };
 
   const start = () => {
     posRef.current = { x: 50, y: 40 };
     velRef.current = { x: 22, y: -55 };
-    setPos({ x: 50, y: 40 });
     setSecs(NEED);
     phaseRef.current = "play";
     setPhase("play");
+    requestAnimationFrame(paint);
   };
 
   useEffect(() => {
@@ -595,21 +611,22 @@ export function GameBalloon({ onComplete, config }: GameProps) {
       if (phaseRef.current !== "play") return;
       const dt = Math.min(0.04, (now - last) / 1000);
       last = now;
-      velRef.current.y += 160 * dt; // gravetat
+      velRef.current.y += 150 * dt; // gravetat
       velRef.current.x *= 0.995;
       let x = posRef.current.x + velRef.current.x * dt;
       let y = posRef.current.y + velRef.current.y * dt;
-      if (x < 8) { x = 8; velRef.current.x = Math.abs(velRef.current.x) * 0.6; }
-      if (x > 92) { x = 92; velRef.current.x = -Math.abs(velRef.current.x) * 0.6; }
-      if (y < 6) { y = 6; velRef.current.y = Math.abs(velRef.current.y) * 0.4; }
-      if (y > 92) {
+      if (x < 10) { x = 10; velRef.current.x = Math.abs(velRef.current.x) * 0.6; }
+      if (x > 90) { x = 90; velRef.current.x = -Math.abs(velRef.current.x) * 0.6; }
+      if (y < 8) { y = 8; velRef.current.y = Math.abs(velRef.current.y) * 0.4; }
+      if (y > 88) {
+        posRef.current = { x, y: 88 };
+        paint();
         phaseRef.current = "lost";
         setPhase("lost");
-        setPos({ x, y: 92 });
         return;
       }
       posRef.current = { x, y };
-      setPos({ x, y });
+      paint();
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -618,7 +635,7 @@ export function GameBalloon({ onComplete, config }: GameProps) {
 
   const boost = () => {
     if (phaseRef.current !== "play") return;
-    velRef.current.y = -90 - Math.random() * 25;
+    velRef.current.y = -95 - Math.random() * 25;
     velRef.current.x += (Math.random() - 0.5) * 50;
   };
 
@@ -631,20 +648,24 @@ export function GameBalloon({ onComplete, config }: GameProps) {
       <div
         ref={boxRef}
         className="relative mx-auto h-72 w-full max-w-[340px] select-none overflow-hidden rounded-2xl bg-gradient-to-b from-sky-200 to-sky-50 ring-1 ring-sky-200"
+        style={{ WebkitUserSelect: "none" }}
       >
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3 bg-emerald-300/70" />
-        {/* Només el globus rep el toc: àrea generosa per al dit */}
-        <button
-          type="button"
-          aria-label="Donar un impuls al globus"
-          onPointerDown={(e) => { e.preventDefault(); boost(); }}
-          disabled={phase !== "play"}
-          className={`absolute -translate-x-1/2 -translate-y-1/2 p-4 active:scale-95 ${phase === "play" ? "" : "pointer-events-none"}`}
-          style={{ left: `${pos.x}%`, top: `${pos.y}%`, touchAction: "none" }}
-        >
-          <span className="block text-6xl leading-none" style={{ filter: "drop-shadow(0 6px 8px rgba(0,0,0,.18))" }}>{EMO}</span>
-          <span className="mx-auto block h-5 w-px bg-stone-500/60" />
-        </button>
+        {/* NOMÉS el globus rep el toc (amb una àrea invisible més gran per al dit) */}
+        {phase !== "idle" && (
+          <button
+            ref={balloonRef}
+            type="button"
+            aria-label="Donar un impuls al globus"
+            onPointerDown={(e) => { e.preventDefault(); boost(); }}
+            disabled={phase !== "play"}
+            className="absolute left-0 top-0 -m-6 p-6 active:scale-90 disabled:pointer-events-none"
+            style={{ willChange: "transform", touchAction: "none" }}
+          >
+            <span className="block text-6xl leading-none" style={{ filter: "drop-shadow(0 6px 8px rgba(0,0,0,.2))" }}>{EMO}</span>
+            <span className="mx-auto block h-5 w-px bg-stone-500/60" />
+          </button>
+        )}
         {phase === "idle" && (
           <div className="absolute inset-0 flex items-center justify-center">
             <button onClick={start} className="rounded-2xl bg-pink-500 px-6 py-3 text-lg font-black text-white shadow-md active:scale-[0.98]">
