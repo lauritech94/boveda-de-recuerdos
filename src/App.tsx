@@ -56,9 +56,9 @@ export default function App() {
   // i es mostra com a avís flotant visible des de QUALSEVOL pantalla.
   const MILESTONES: { n: number; msg: string }[] = [
     { n: 5, msg: "🍌 Bello! Ja en portes 5? No m'ho crec!" },
-    { n: 10, msg: "🎁 Poopaye! Has arribat al primer regal!" },
+    { n: 10, msg: "🍌 Bello! Ja en portes 10!" },
     { n: 15, msg: "⚡ Ja ets a la meitat dels records!" },
-    { n: 20, msg: "✈️ Tulaliloo ti amo! Un altre regal!" },
+    { n: 20, msg: "🔥 Ja en portes 20! Només en falten 10!" },
     { n: 25, msg: "🔥 Només te'n falten 5, nooo!" },
     { n: 29, msg: "🎬 Només falta l'última! Prepara't!" },
     { n: 30, msg: "🌟 BANANAAA! Els has aconseguit tots!" },
