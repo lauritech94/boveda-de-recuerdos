@@ -34,8 +34,7 @@ export const APP_NAME = "La Càmera dels Records";
  *  i sense errors, sense que l'usuari hagi de fer res.
  *  (El progrés de les 30 esferes i l'estat del calendari NO depenen d'aquesta versió: es
  *  conserven, perquè el recorregut de qui està jugant no s'ha de perdre per una correcció.) */
-/** ⚠️ Quan pugis aquest número, puja TAMBÉ el <meta name="cdr-build"> d'index.html. */
-export const CONTENT_VERSION = 12;
+export const CONTENT_VERSION = 11;
 
 /** Targeta d'inici (l'enllaç principal, sense ?bola=). No és cap esfera. Editable des del panell. */
 export const HOME_TEXT_DEFAULT = `Aquesta nit, un Minion molt trapella ha volgut robar-te els teus records.

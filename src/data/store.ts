@@ -18,6 +18,12 @@ const KEY_BASE_SIG = `esferas_base_sig_v${CONTENT_VERSION}`;
 /** Empremta del recuerdos.json carregat ara mateix. */
 let publishedSig = "";
 
+/** Calendari (?sorpresa=1) publicat al recuerdos.json, si n'hi ha. */
+let publishedTeaser: unknown = null;
+export function getPublishedTeaser() {
+  return publishedTeaser;
+}
+
 /** Prefixos de les claus de contingut editat (les que depenen de la versió).
  *  NO hi són el progrés (`esferas_progreso_`) ni el calendari (`teaser_`): aquests
  *  s'han de conservar entre versions. */
@@ -353,6 +359,7 @@ export async function loadPublished(): Promise<{ memories: Partial<Memory>[]; fi
     publishedSig = sig;
     const v = typeof data.v === "number" ? data.v : 1;
     stalePublished = v < CONTENT_VERSION;
+    publishedTeaser = data.teaser && typeof data.teaser === "object" ? data.teaser : null;
     if (!stalePublished) return { memories: data.memories, final: data.final || {}, v, sig };
     // JSON d'una versió anterior: conserva els canvis que l'usuari va editar,
     // però neteja valors antics coneguts. El gameKey continuarà sent decidit per
@@ -404,7 +411,7 @@ const FINAL_KEYS = ["homeText", "title", "message", "photo"] as const;
 
 /** Exporta NOMÉS el que s'ha editat al panell. Així el recuerdos.json no tapa mai
  *  els valors que venen de memories.ts (emojis, jocs per defecte…). */
-export function exportAll(memories: Memory[], final: FinalMemory, filename = "recuerdos.json") {
+export function exportAll(memories: Memory[], final: FinalMemory, filename = "recuerdos.json", teaser?: unknown) {
   const diff = memories
     .map((m) => {
       const base = DEFAULT_MEMORIES.find((d) => d.id === m.id);
@@ -415,7 +422,8 @@ export function exportAll(memories: Memory[], final: FinalMemory, filename = "re
     })
     .filter((x): x is Partial<Memory> & { id: number } => x !== null);
   const finalDiff = pickDiff(FINAL_DEFAULT, final, [...FINAL_KEYS] as unknown as (keyof typeof FINAL_DEFAULT)[]);
-  const payload = { v: CONTENT_VERSION, exportedAt: Date.now(), memories: diff, final: finalDiff };
+  const payload: Record<string, unknown> = { v: CONTENT_VERSION, exportedAt: Date.now(), memories: diff, final: finalDiff };
+  if (teaser) payload.teaser = teaser; // calendari (?sorpresa=1) editat al panell
   const text = JSON.stringify(payload, null, 2);
   // Només el recuerdos.json principal (no les còpies de seguretat): quan el publiquis,
   // l'empremta coincidirà i aquest navegador conservarà els seus canvis.

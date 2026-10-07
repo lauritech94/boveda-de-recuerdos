@@ -87,22 +87,6 @@ export default function App() {
 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
-    // 🧹 RESTAURAR-HO TOT (?restaurar=1): esborra totes les dades locals de l'app
-    // (progrés, calendari de portes, canvis del panell, so) i recarrega amb codi fresc.
-    // És el botó de "deixar aquest navegador com nou" quan alguna cosa no quadra.
-    if (p.get("restaurar") === "1") {
-      try {
-        const claus: string[] = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (k && (k.startsWith("esferas_") || k.startsWith("teaser_") || k === "app_html_sig" || k === "camara_son_activat")) claus.push(k);
-        }
-        claus.forEach((k) => localStorage.removeItem(k));
-        sessionStorage.clear();
-      } catch { /* sense localStorage no hi ha res a restaurar */ }
-      window.location.replace(`${window.location.pathname}?v=${Date.now()}`);
-      return;
-    }
     if (p.get("reset") === "1") {
       resetProgress();
       setProgress({});
@@ -116,27 +100,29 @@ export default function App() {
     if (p.get("editar") === "1") setEditing(true);
   }, []);
 
-  // 🔄 AUTO-ACTUALITZACIÓ (corregida): la pàgina coneix la seva versió pel
-  // <meta name="cdr-build"> i pregunta al servidor quina versió hi ha publicada.
-  // NOMÉS es recarrega si la del servidor és MÉS GRAN que la seva: així és
-  // impossible el bucle de recàrregues (un cop actualitzada, són iguals).
+  // 🔄 AUTO-ACTUALITZACIÓ: els mòbils guarden l'index.html en memòria cau i poden quedar-se
+  // amb una versió antiga encara que pugem canvis. Aquí es demana al servidor la versió
+  // fresca (amb ?check= per saltar-se la cau), se'n calcula una empremta i, si és diferent
+  // de la que es va veure per última vegada, es recarrega la pàgina amb una URL única
+  // perquè el navegador es baixi el codi nou. Només fa UNA recàrrega quan hi ha versió nova.
   useEffect(() => {
-    try { localStorage.removeItem("app_html_sig"); } catch { /* neteja del sistema antic */ }
-    const myV = parseInt(document.querySelector('meta[name="cdr-build"]')?.getAttribute("content") || "0");
-    if (!myV) return;
+    const KEY_SIG = "app_html_sig";
     fetch(`${window.location.pathname}?check=${Date.now()}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.text() : null))
       .then((html) => {
-        const m = html?.match(/name="cdr-build"\s+content="(\d+)"/);
-        const serverV = m ? parseInt(m[1]) : 0;
-        if (serverV > myV) {
-          // Protecció extra: una sola recàrrega per versió i sessió
-          try {
-            if (sessionStorage.getItem("cdr_up") === String(serverV)) return;
-            sessionStorage.setItem("cdr_up", String(serverV));
-          } catch { /* sense sessionStorage igualment és segur pel serverV > myV */ }
+        if (!html) return;
+        let h = 5381;
+        for (let i = 0; i < html.length; i++) h = ((h << 5) + h + html.charCodeAt(i)) | 0;
+        const sig = `${html.length}-${(h >>> 0).toString(36)}`;
+        let old: string | null = null;
+        try {
+          old = localStorage.getItem(KEY_SIG);
+          localStorage.setItem(KEY_SIG, sig);
+        } catch { /* sense localStorage no es pot comparar */ }
+        if (old && old !== sig) {
+          // Hi ha una versió nova publicada: recàrrega amb URL única (esquiva la cau)
           const url = new URL(window.location.href);
-          url.searchParams.set("v", String(serverV));
+          url.searchParams.set("actualitzacio", sig.slice(-6));
           window.location.replace(url.toString());
         }
       })
