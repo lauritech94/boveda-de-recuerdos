@@ -27,7 +27,7 @@ export type Memory = {
 
 export const APP_NAME = "La Càmera dels Records";
 
-export const CONTENT_VERSION = 12;
+export const CONTENT_VERSION = 14;
 
 export type TeaserDay = {
   dia: number;
