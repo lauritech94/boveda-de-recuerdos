@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import confetti from "canvas-confetti";
-import { APP_NAME, DEFAULT_MEMORIES, EMOTIONS, EmotionKey, FINAL_DEFAULT, Memory } from "./data/memories";
+import { APP_NAME, DEFAULT_MEMORIES, EMOTIONS, EmotionKey, FINAL_DEFAULT, Memory, getEmotion, normalizeEmotion } from "./data/memories";
 import {
   loadMemories, saveMemories, loadFinal, saveFinal, loadProgress, saveProgress, resetProgress,
   loadPublished, applyMemoryOverrides, loadLocalMemoryOverrides, loadLocalFinalOverride, mergeFinal,
@@ -100,48 +100,6 @@ export default function App() {
     if (p.get("editar") === "1") setEditing(true);
   }, []);
 
-  // 🔄 AUTO-ACTUALITZACIÓ: els mòbils guarden l'index.html en memòria cau i poden quedar-se
-  // amb una versió antiga encara que pugem canvis. Aquí es demana al servidor la versió
-  // fresca (amb ?check= per saltar-se la cau), se'n calcula una empremta i, si és diferent
-  // de la que es va veure per última vegada, es recarrega la pàgina amb una URL única
-  // perquè el navegador es baixi el codi nou. Només fa UNA recàrrega quan hi ha versió nova.
-  useEffect(() => {
-    const KEY_SIG = "app_html_sig";
-    const KEY_FET = "app_update_check";
-    try {
-      // Mai en bucle: si aquesta càrrega JA ve d'una actualització, o ja s'ha comprovat
-      // en aquesta sessió, no es torna a comprovar ni recarregar.
-      if (new URLSearchParams(window.location.search).has("actualitzacio")) {
-        const url = new URL(window.location.href);
-        url.searchParams.delete("actualitzacio");
-        window.history.replaceState({}, "", url.toString());
-        return;
-      }
-      if (sessionStorage.getItem(KEY_FET)) return;
-      sessionStorage.setItem(KEY_FET, "1");
-    } catch { return; }
-    fetch(`${window.location.pathname}?check=${Date.now()}`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.text() : null))
-      .then((html) => {
-        if (!html) return;
-        let h = 5381;
-        for (let i = 0; i < html.length; i++) h = ((h << 5) + h + html.charCodeAt(i)) | 0;
-        const sig = `${html.length}-${(h >>> 0).toString(36)}`;
-        let old: string | null = null;
-        try {
-          old = localStorage.getItem(KEY_SIG);
-          localStorage.setItem(KEY_SIG, sig);
-        } catch { /* sense localStorage no es pot comparar */ }
-        if (old && old !== sig) {
-          // Hi ha versió nova publicada: UNA recàrrega amb URL única (esquiva la cau)
-          const url = new URL(window.location.href);
-          url.searchParams.set("actualitzacio", sig.slice(-6));
-          window.location.replace(url.toString());
-        }
-      })
-      .catch(() => { /* sense connexió: es continua amb la versió actual */ });
-  }, []);
-
   useEffect(() => {
     // Neteja de dades locals antigues de versions anteriors (fosa per a cada canvi de codi)
     cleanupOldContentKeys();
@@ -201,7 +159,7 @@ export default function App() {
   const byEmotion = useMemo(() => {
     const r = {} as Record<EmotionKey, number>;
     (Object.keys(EMOTIONS) as EmotionKey[]).forEach((k) => (r[k] = 0));
-    memories.forEach((m) => { if (progress[m.id]) r[m.emotion]++; });
+    memories.forEach((m) => { if (progress[m.id]) r[normalizeEmotion(m.emotion)]++; });
     return r;
   }, [memories, progress]);
 
@@ -225,11 +183,13 @@ export default function App() {
   }
 
   /* ---------- CÀRREGA: evita el parpelleig del text per defecte ---------- */
-  if (!ready && !editing) {
+  // L'editor també espera el JSON publicat; si s'obre massa aviat, pot mostrar dades
+  // antigues i permetre sobrescriure-les abans que acabi la descàrrega.
+  if (!ready) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
         <Fons />
-        <main className="tarjeta flex flex-col items-center py-14 text-center" style={active ? { borderColor: EMOTIONS[active.emotion].color } : undefined}>
+        <main className="tarjeta flex flex-col items-center py-14 text-center" style={active ? { borderColor: getEmotion(active.emotion).color } : undefined}>
           {active ? (
             <Sphere emotion={active.emotion} emotion2={active.emotion2} size={110} pulse />
           ) : (

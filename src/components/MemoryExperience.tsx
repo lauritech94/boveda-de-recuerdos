@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import confetti from "canvas-confetti";
-import { APP_NAME, EMOTIONS, Memory } from "../data/memories";
+import { APP_NAME, Memory, getEmotion } from "../data/memories";
 import { GAME_DEFS } from "../games/registry";
 import { Sphere } from "./Sphere";
 import { MinionImg } from "./MinionImg";
@@ -42,7 +42,7 @@ function Pista({ text, color }: { text: string; color: string }) {
 }
 
 export function MemoryExperience({ memory: m, unlocked, unlockedCount, othersUnlocked, onUnlock, onHome }: Props) {
-  const emo = EMOTIONS[m.emotion];
+  const emo = getEmotion(m.emotion);
   const def = GAME_DEFS[m.gameKey];
   const Comp = def?.Comp;
   const { on: soundActive, toggle: toggleSound } = useSound();
@@ -60,7 +60,7 @@ export function MemoryExperience({ memory: m, unlocked, unlockedCount, othersUnl
   // Aplica el color de l'emoció a tota la targeta (botons, vora, fons de la pista…)
   useEffect(() => {
     document.documentElement.style.setProperty("--color", emo.color);
-    document.documentElement.style.setProperty("--color2", m.emotion2 ? EMOTIONS[m.emotion2].color : emo.color);
+    document.documentElement.style.setProperty("--color2", m.emotion2 ? getEmotion(m.emotion2).color : emo.color);
     document.documentElement.style.setProperty("--soft", emo.soft);
     return () => {
       document.documentElement.style.setProperty("--color", "#ffd84d");
@@ -84,7 +84,7 @@ export function MemoryExperience({ memory: m, unlocked, unlockedCount, othersUnl
       particleCount: big ? 200 : 100,
       spread: big ? 120 : 80,
       origin: { y: 0.6 },
-      colors: [emo.color, "#ffffff", m.emotion2 ? EMOTIONS[m.emotion2].color : "#ffd84d"],
+      colors: [emo.color, "#ffffff", m.emotion2 ? getEmotion(m.emotion2).color : "#ffd84d"],
     });
   };
 

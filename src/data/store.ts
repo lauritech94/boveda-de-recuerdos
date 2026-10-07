@@ -1,4 +1,4 @@
-import { CONTENT_VERSION, DEFAULT_MEMORIES, EMOTIONS, FINAL_DEFAULT, Memory } from "./memories";
+import { CONTENT_VERSION, DEFAULT_MEMORIES, FINAL_DEFAULT, Memory, normalizeEmotion, normalizeSecondaryEmotion } from "./memories";
 
 /** Les claus inclouen la versió del contingut: si canvio un text o un joc al codi i pujo
  *  CONTENT_VERSION, les còpies velles guardades al panell deixen de tenir efecte automàticament.
@@ -187,49 +187,17 @@ function cleanLegacy(o: Partial<Memory> | undefined): Partial<Memory> | undefine
  *  Solo se respeta el de la capa guardada si se cambió desde el panel (config.__gameCustom).
  *  Así un recuerdos.json antiguo nunca bloquea un cambio de juego hecho en el código. */
 export function applyMemoryOverrides(base: Memory[], over: Partial<Memory>[] = []): Memory[] {
-  if (!Array.isArray(over) || over.length === 0) return base.map(sanitizeMemory);
+  if (!Array.isArray(over) || over.length === 0) return base;
   return base.map((m) => {
     const o = { ...(cleanLegacy(over.find((x) => x && x.id === m.id)) || {}) };
     if ((o.config as Record<string, any> | undefined)?.__gameCustom !== "1") delete o.gameKey;
-    return sanitizeMemory({ ...m, ...o, config: { ...(m.config || {}), ...(o.config || {}) } });
+    const merged = { ...m, ...o, config: { ...(m.config || {}), ...(o.config || {}) } };
+    return {
+      ...merged,
+      emotion: normalizeEmotion(merged.emotion),
+      emotion2: normalizeSecondaryEmotion(merged.emotion2),
+    };
   });
-}
-
-/** 🛡️ SANEJAMENT: garanteix que cap dada guardada (JSON antic, còpia local, edició a mig
- *  fer) pugui arribar al dibuix amb un valor invàlid. Un camp dolent aquí = pantalla en
- *  blanc a l'estanteria, a les boles i a l'editor. Per això tot passa per aquest filtre. */
-const EMO_VALIDES = new Set(Object.keys(EMOTIONS));
-/** Emocions de la versió antiga en castellà → equivalent actual en català. */
-const EMO_ANTIGUES: Record<string, string> = { tristeza: "tristesa", ira: "rabia", asco: "fastic", miedo: "por" };
-const KINDS_VALIDS = new Set(["intro", "game", "gift", "video"]);
-
-function fixEmo(v: unknown): string | undefined {
-  if (typeof v !== "string") return undefined;
-  if (EMO_VALIDES.has(v)) return v;
-  if (EMO_ANTIGUES[v] && EMO_VALIDES.has(EMO_ANTIGUES[v])) return EMO_ANTIGUES[v];
-  return undefined;
-}
-
-function sanitizeMemory(m: Memory): Memory {
-  const base = DEFAULT_MEMORIES.find((d) => d.id === m.id);
-  const str = (v: unknown, fb: string) => (typeof v === "string" ? v : fb);
-  const emotion = fixEmo(m.emotion) || base?.emotion || "alegria";
-  const emotion2 = fixEmo(m.emotion2); // si no és vàlida, simplement no n'hi ha segona
-  return {
-    ...m,
-    kind: KINDS_VALIDS.has(m.kind as string) ? m.kind : base?.kind || "game",
-    title: str(m.title, base?.title || ""),
-    when: str(m.when, base?.when || ""),
-    hint: str(m.hint, base?.hint || ""),
-    gameKey: str(m.gameKey, base?.gameKey || ""),
-    gameWhy: str(m.gameWhy, base?.gameWhy || ""),
-    message: str(m.message, base?.message || ""),
-    photo: str(m.photo, ""),
-    photoCaption: typeof m.photoCaption === "string" ? m.photoCaption : undefined,
-    emotion: emotion as Memory["emotion"],
-    emotion2: emotion2 as Memory["emotion2"],
-    config: m.config && typeof m.config === "object" ? m.config : {},
-  };
 }
 
 /** Combina el text per defecte amb les capes desades. Descarta el text d'inici antic ("Benvinguda!…"). */
@@ -397,8 +365,9 @@ export async function loadPublished(): Promise<{ memories: Partial<Memory>[]; fi
     const mems = (data.memories as Partial<Memory>[])
       .map((o) => cleanLegacy(o))
       .filter((x): x is Partial<Memory> => !!x && typeof x.id === "number");
-    const fin: Partial<FinalMemory> = {};
-    if (data.final) fin.photo = data.final.photo;
+    // El missatge final també pot ser personal: una versió antiga del JSON no l'ha
+    // d'esborrar només perquè s'ha actualitzat el codi.
+    const fin: Partial<FinalMemory> = data.final && typeof data.final === "object" ? data.final : {};
     return { memories: mems, final: fin, v, sig };
   } catch {
     return null;

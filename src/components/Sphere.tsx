@@ -1,4 +1,4 @@
-import { EMOTIONS, EmotionKey } from "../data/memories";
+import { EmotionKey, getEmotion } from "../data/memories";
 
 export function Sphere({
   emotion,
@@ -17,13 +17,14 @@ export function Sphere({
   number?: number;
   pulse?: boolean;
 }) {
-  const c1 = EMOTIONS[emotion].color;
-  const c2 = emotion2 ? EMOTIONS[emotion2].color : c1;
+  const main = getEmotion(emotion);
+  const c1 = main.color;
+  const c2 = emotion2 ? getEmotion(emotion2).color : c1;
   const id = `g-${emotion}-${emotion2 || "x"}-${size}`;
   return (
     <div
       className={`relative shrink-0 ${pulse ? "animate-floaty" : ""}`}
-      style={{ width: size, height: size, filter: locked ? "grayscale(0.85) brightness(0.55)" : `drop-shadow(0 0 ${size / 6}px ${EMOTIONS[emotion].glow})` }}
+      style={{ width: size, height: size, filter: locked ? "grayscale(0.85) brightness(0.55)" : `drop-shadow(0 0 ${size / 6}px ${main.glow})` }}
     >
       <svg viewBox="0 0 100 100" width={size} height={size}>
         <defs>
