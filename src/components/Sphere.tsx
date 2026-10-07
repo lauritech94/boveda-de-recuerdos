@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { EMOTIONS, EmotionKey } from "../data/memories";
 
 export function Sphere({
@@ -19,7 +20,10 @@ export function Sphere({
 }) {
   const c1 = EMOTIONS[emotion].color;
   const c2 = emotion2 ? EMOTIONS[emotion2].color : c1;
-  const id = `g-${emotion}-${emotion2 || "x"}-${size}`;
+  // useId: identificador ÚNIC per a cada esfera. Abans es repetia entre esferes de la
+  // mateixa emoció i mida, els degradats SVG xocaven i a molts mòbils es pintaven
+  // invisibles (l'estanteria es veia buida).
+  const id = useId().replace(/[^a-zA-Z0-9]/g, "");
   return (
     <div
       className={`relative shrink-0 ${pulse ? "animate-floaty" : ""}`}
