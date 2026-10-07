@@ -406,9 +406,15 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
                         <div className="border-t border-white/10 p-3">
                           <div className="grid gap-3 md:grid-cols-2">
                             <div className="space-y-2.5">
-                              <div>
-                                <label className={labelCls}>Título del día (en catalán)</label>
-                                <input value={d.titol} onChange={(e) => updateTeaserDay(d.dia, { titol: e.target.value })} className={inputCls} />
+                              <div className="grid grid-cols-[90px_1fr] gap-2">
+                                <div>
+                                  <label className={labelCls}>Icona gran</label>
+                                  <input value={d.emoji} onChange={(e) => updateTeaserDay(d.dia, { emoji: e.target.value })} className={`${inputCls} text-center text-xl`} placeholder="🎂" />
+                                </div>
+                                <div>
+                                  <label className={labelCls}>Título del día (en catalán)</label>
+                                  <input value={d.titol} onChange={(e) => updateTeaserDay(d.dia, { titol: e.target.value })} className={inputCls} />
+                                </div>
                               </div>
                               <div>
                                 <label className={labelCls}>Texto ANTES de rascar (introducción)</label>
