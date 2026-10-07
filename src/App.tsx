@@ -11,6 +11,7 @@ import { MemoryExperience } from "./components/MemoryExperience";
 import { Editor } from "./components/Editor";
 import { PrintSheets } from "./components/PrintSheets";
 import { MinionImg } from "./components/MinionImg";
+import { Teaser } from "./components/Teaser";
 import { useSound, playSound } from "./components/useSound";
 import { Volume2, VolumeX, Sparkles } from "lucide-react";
 
@@ -44,6 +45,8 @@ export default function App() {
   // No es pinta res fins que les dades publicades estiguin carregades:
   // així no es veu ni un instant el text per defecte abans del vostre.
   const [ready, setReady] = useState(false);
+  // Avançament del dia de l'aniversari (?sorpresa=1): pàgina independent del joc
+  const [teaserMode] = useState(() => new URLSearchParams(window.location.search).get("sorpresa") === "1");
 
   const { on: soundActive, toggle: toggleSound } = useSound();
 
@@ -166,6 +169,16 @@ export default function App() {
       <p>{minionComment}</p>
     </div>
   );
+
+  /* ---------- AVANÇAMENT DE L'ANIVERSARI (no toca el progrés del joc) ---------- */
+  if (teaserMode) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <Fons />
+        <Teaser />
+      </div>
+    );
+  }
 
   /* ---------- CÀRREGA: evita el parpelleig del text per defecte ---------- */
   if (!ready && !editing) {
