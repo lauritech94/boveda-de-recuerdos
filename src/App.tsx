@@ -107,6 +107,19 @@ export default function App() {
   // perquè el navegador es baixi el codi nou. Només fa UNA recàrrega quan hi ha versió nova.
   useEffect(() => {
     const KEY_SIG = "app_html_sig";
+    const KEY_FET = "app_update_check";
+    try {
+      // Mai en bucle: si aquesta càrrega JA ve d'una actualització, o ja s'ha comprovat
+      // en aquesta sessió, no es torna a comprovar ni recarregar.
+      if (new URLSearchParams(window.location.search).has("actualitzacio")) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("actualitzacio");
+        window.history.replaceState({}, "", url.toString());
+        return;
+      }
+      if (sessionStorage.getItem(KEY_FET)) return;
+      sessionStorage.setItem(KEY_FET, "1");
+    } catch { return; }
     fetch(`${window.location.pathname}?check=${Date.now()}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.text() : null))
       .then((html) => {
@@ -120,7 +133,7 @@ export default function App() {
           localStorage.setItem(KEY_SIG, sig);
         } catch { /* sense localStorage no es pot comparar */ }
         if (old && old !== sig) {
-          // Hi ha una versió nova publicada: recàrrega amb URL única (esquiva la cau)
+          // Hi ha versió nova publicada: UNA recàrrega amb URL única (esquiva la cau)
           const url = new URL(window.location.href);
           url.searchParams.set("actualitzacio", sig.slice(-6));
           window.location.replace(url.toString());

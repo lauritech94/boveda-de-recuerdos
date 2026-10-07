@@ -1,4 +1,4 @@
-import { CONTENT_VERSION, DEFAULT_MEMORIES, FINAL_DEFAULT, Memory } from "./memories";
+import { CONTENT_VERSION, DEFAULT_MEMORIES, EMOTIONS, FINAL_DEFAULT, Memory } from "./memories";
 
 /** Les claus inclouen la versió del contingut: si canvio un text o un joc al codi i pujo
  *  CONTENT_VERSION, les còpies velles guardades al panell deixen de tenir efecte automàticament.
@@ -17,12 +17,6 @@ const KEY_BASE_SIG = `esferas_base_sig_v${CONTENT_VERSION}`;
 
 /** Empremta del recuerdos.json carregat ara mateix. */
 let publishedSig = "";
-
-/** Calendari (?sorpresa=1) publicat al recuerdos.json, si n'hi ha. */
-let publishedTeaser: unknown = null;
-export function getPublishedTeaser() {
-  return publishedTeaser;
-}
 
 /** Prefixos de les claus de contingut editat (les que depenen de la versió).
  *  NO hi són el progrés (`esferas_progreso_`) ni el calendari (`teaser_`): aquests
@@ -193,12 +187,49 @@ function cleanLegacy(o: Partial<Memory> | undefined): Partial<Memory> | undefine
  *  Solo se respeta el de la capa guardada si se cambió desde el panel (config.__gameCustom).
  *  Así un recuerdos.json antiguo nunca bloquea un cambio de juego hecho en el código. */
 export function applyMemoryOverrides(base: Memory[], over: Partial<Memory>[] = []): Memory[] {
-  if (!Array.isArray(over) || over.length === 0) return base;
+  if (!Array.isArray(over) || over.length === 0) return base.map(sanitizeMemory);
   return base.map((m) => {
     const o = { ...(cleanLegacy(over.find((x) => x && x.id === m.id)) || {}) };
     if ((o.config as Record<string, any> | undefined)?.__gameCustom !== "1") delete o.gameKey;
-    return { ...m, ...o, config: { ...(m.config || {}), ...(o.config || {}) } };
+    return sanitizeMemory({ ...m, ...o, config: { ...(m.config || {}), ...(o.config || {}) } });
   });
+}
+
+/** 🛡️ SANEJAMENT: garanteix que cap dada guardada (JSON antic, còpia local, edició a mig
+ *  fer) pugui arribar al dibuix amb un valor invàlid. Un camp dolent aquí = pantalla en
+ *  blanc a l'estanteria, a les boles i a l'editor. Per això tot passa per aquest filtre. */
+const EMO_VALIDES = new Set(Object.keys(EMOTIONS));
+/** Emocions de la versió antiga en castellà → equivalent actual en català. */
+const EMO_ANTIGUES: Record<string, string> = { tristeza: "tristesa", ira: "rabia", asco: "fastic", miedo: "por" };
+const KINDS_VALIDS = new Set(["intro", "game", "gift", "video"]);
+
+function fixEmo(v: unknown): string | undefined {
+  if (typeof v !== "string") return undefined;
+  if (EMO_VALIDES.has(v)) return v;
+  if (EMO_ANTIGUES[v] && EMO_VALIDES.has(EMO_ANTIGUES[v])) return EMO_ANTIGUES[v];
+  return undefined;
+}
+
+function sanitizeMemory(m: Memory): Memory {
+  const base = DEFAULT_MEMORIES.find((d) => d.id === m.id);
+  const str = (v: unknown, fb: string) => (typeof v === "string" ? v : fb);
+  const emotion = fixEmo(m.emotion) || base?.emotion || "alegria";
+  const emotion2 = fixEmo(m.emotion2); // si no és vàlida, simplement no n'hi ha segona
+  return {
+    ...m,
+    kind: KINDS_VALIDS.has(m.kind as string) ? m.kind : base?.kind || "game",
+    title: str(m.title, base?.title || ""),
+    when: str(m.when, base?.when || ""),
+    hint: str(m.hint, base?.hint || ""),
+    gameKey: str(m.gameKey, base?.gameKey || ""),
+    gameWhy: str(m.gameWhy, base?.gameWhy || ""),
+    message: str(m.message, base?.message || ""),
+    photo: str(m.photo, ""),
+    photoCaption: typeof m.photoCaption === "string" ? m.photoCaption : undefined,
+    emotion: emotion as Memory["emotion"],
+    emotion2: emotion2 as Memory["emotion2"],
+    config: m.config && typeof m.config === "object" ? m.config : {},
+  };
 }
 
 /** Combina el text per defecte amb les capes desades. Descarta el text d'inici antic ("Benvinguda!…"). */
@@ -359,7 +390,6 @@ export async function loadPublished(): Promise<{ memories: Partial<Memory>[]; fi
     publishedSig = sig;
     const v = typeof data.v === "number" ? data.v : 1;
     stalePublished = v < CONTENT_VERSION;
-    publishedTeaser = data.teaser && typeof data.teaser === "object" ? data.teaser : null;
     if (!stalePublished) return { memories: data.memories, final: data.final || {}, v, sig };
     // JSON d'una versió anterior: conserva els canvis que l'usuari va editar,
     // però neteja valors antics coneguts. El gameKey continuarà sent decidit per
@@ -411,7 +441,7 @@ const FINAL_KEYS = ["homeText", "title", "message", "photo"] as const;
 
 /** Exporta NOMÉS el que s'ha editat al panell. Així el recuerdos.json no tapa mai
  *  els valors que venen de memories.ts (emojis, jocs per defecte…). */
-export function exportAll(memories: Memory[], final: FinalMemory, filename = "recuerdos.json", teaser?: unknown) {
+export function exportAll(memories: Memory[], final: FinalMemory, filename = "recuerdos.json") {
   const diff = memories
     .map((m) => {
       const base = DEFAULT_MEMORIES.find((d) => d.id === m.id);
@@ -422,8 +452,7 @@ export function exportAll(memories: Memory[], final: FinalMemory, filename = "re
     })
     .filter((x): x is Partial<Memory> & { id: number } => x !== null);
   const finalDiff = pickDiff(FINAL_DEFAULT, final, [...FINAL_KEYS] as unknown as (keyof typeof FINAL_DEFAULT)[]);
-  const payload: Record<string, unknown> = { v: CONTENT_VERSION, exportedAt: Date.now(), memories: diff, final: finalDiff };
-  if (teaser) payload.teaser = teaser; // calendari (?sorpresa=1) editat al panell
+  const payload = { v: CONTENT_VERSION, exportedAt: Date.now(), memories: diff, final: finalDiff };
   const text = JSON.stringify(payload, null, 2);
   // Només el recuerdos.json principal (no les còpies de seguretat): quan el publiquis,
   // l'empremta coincidirà i aquest navegador conservarà els seus canvis.

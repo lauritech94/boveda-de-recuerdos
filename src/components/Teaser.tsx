@@ -3,8 +3,6 @@ import confetti from "canvas-confetti";
 import { MinionImg } from "./MinionImg";
 import { GameScratch } from "../games/set4";
 import { playSound, vibrate } from "./useSound";
-import { getPublishedTeaser, loadPublished } from "../data/store";
-import { TeaserData, TeaserDia, loadLocalTeaser, mergeTeaser } from "../data/teaserData";
 
 /**
  * 🗓️ CALENDARI D'ANTICIPACIÓ  ·  enllaç de l'NFC: ?sorpresa=1
@@ -21,32 +19,93 @@ import { TeaserData, TeaserDia, loadLocalTeaser, mergeTeaser } from "../data/tea
  *   ?sorpresa=1&ara=2026-11-05T09:00   → simula un dia/hora concret
  * ────────────────────────────────────────────────────────────────────────────
  */
+const ANY = 2026;
 const MES = 11;
+const HORA_OBERTURA = 8;
 const KEY = "teaser_rascat_v1";
 const KEY_OVR = "teaser_overrides_v1";
 const KEY_FLAGS = "teaser_flags_v1";
 const ADMIN_KEY = "minion2026";
 
-/** Les dades (portes, textos, icones, hora…) ara s'editen des del panell (?editar=1)
- *  i viuen a src/data/teaserData.ts + recuerdos.json. Aquí només hi ha la lògica. */
-type Dia = TeaserDia;
+type Dia = {
+  dia: number;
+  emoji: string;
+  titol: string;
+  intro: string;
+  secret: string;
+  cosa: { emoji: string; nom: string };
+  text: string;
+  foto?: string;
+  peu?: string;
+  sempreOberta?: boolean;
+  gran?: boolean;
+};
 
-/* ---------- utilitats de temps (depenen de la configuració editable: any i hora) ---------- */
+export const CALENDARI: Dia[] = [
+  {
+    dia: 4,
+    emoji: "🎂",
+    titol: "Per molts anys!",
+    intro:
+      "Avui és el teu dia… i el Minion no s'ha pogut aguantar.\n\nT'ha deixat una carta, però li ha tapat el més important amb una capa de plata. Rasca-la!",
+    secret: "DISSABTE\n7 de novembre 🔮",
+    cosa: { emoji: "🍌", nom: "El plàtan del Minion" },
+    text: "Aquest dissabte t'espera una aventura molt especial.\n\nUn Minion molt trapella té alguna cosa teva… i necessitarem la teva ajuda per recuperar-la.\n\nA partir d'avui, cada dia a les 08:00 s'obrirà una porta nova. Només has de tornar a obrir aquesta mateixa targeta. 💛",
+    sempreOberta: true,
+  },
+  {
+    dia: 5,
+    emoji: "🍌",
+    titol: "Ha passat per aquí",
+    intro: "Algú ha estat rondant per casa aquesta nit.\n\nHa deixat una cosa a terra, però està tot tapat. Rasca per veure què és!",
+    secret: "Una pell\nde plàtan 🍌",
+    cosa: { emoji: "👣", nom: "Unes petjades" },
+    text: "El Minion ha tornat a passar per aquí.\n\nNo sabem què busca ni on s'amaga, però cada nit deixa alguna cosa enrere.\n\nDemà hi tornarà. 👀",
+  },
+  {
+    dia: 6,
+    emoji: "🔔",
+    titol: "Està nerviós",
+    intro: "Avui ha deixat caure una cosa amb molta pressa.\n\nSembla que té un pla per a demà… Rasca!",
+    secret: "Demà\nens veiem ✨",
+    cosa: { emoji: "⏰", nom: "Un rellotge" },
+    text: "El Minion està nerviós: demà és el seu gran dia… o el teu.\n\nDescansa bé aquesta nit, que demà et tocarà córrer.\n\nDemà ho entendràs tot. 💛",
+  },
+  {
+    dia: 7,
+    emoji: "🔮",
+    titol: "Avui és el dia",
+    intro: "Ha arribat el moment.\n\nLa darrera porta té el segell més gruixut de tots. Rasca fort!",
+    secret: "A casa\ndels papes 🏠",
+    cosa: { emoji: "🎉", nom: "La sorpresa" },
+    text: "Avui, a les 17:00, a casa dels papes.\n\nVine amb ganes de jugar i de passar-t'ho bé: t'hi esperem tots. 💛\n\n(I el Minion també. Ell diu que no, però sí.)",
+    gran: true,
+  },
+];
+
+const MISSATGE_INICIAL = `Un Minion molt trapella ronda per casa.
+
+Cada dia a les 08:00 s'obre una porta nova.
+
+Rasca-la i descobreix què t'ha deixat.`;
+
+/* ---------- utilitats de temps ---------- */
 const DIES = ["diumenge", "dilluns", "dimarts", "dimecres", "dijous", "divendres", "dissabte"];
 const MESOS = ["gener", "febrer", "març", "abril", "maig", "juny", "juliol", "agost", "setembre", "octubre", "novembre", "desembre"];
+const HORA = `${String(HORA_OBERTURA).padStart(2, "0")}:00`;
 
 type Overrides = Record<number, "open" | "blocked">;
 type Flags = { senseHores: boolean; circuit: boolean };
 
-function obertura(cfg: TeaserData, d: Dia, senseHores: boolean): number {
-  return new Date(cfg.any, MES - 1, d.dia, senseHores ? 0 : cfg.hora, 0, 0).getTime();
+function obertura(d: Dia, senseHores: boolean): number {
+  return new Date(ANY, MES - 1, d.dia, senseHores ? 0 : HORA_OBERTURA, 0, 0).getTime();
 }
-function etiqueta(cfg: TeaserData, d: Dia): string {
-  const dt = new Date(cfg.any, MES - 1, d.dia);
+function etiqueta(d: Dia): string {
+  const dt = new Date(ANY, MES - 1, d.dia);
   return `${DIES[dt.getDay()]} ${d.dia} de ${MESOS[MES - 1]}`;
 }
-function quanTxt(cfg: TeaserData, d: Dia, now: number): string {
-  const o = new Date(obertura(cfg, d, false));
+function quanTxt(d: Dia, now: number): string {
+  const o = new Date(obertura(d, false));
   const avui0 = new Date(now);
   avui0.setHours(0, 0, 0, 0);
   const o0 = new Date(o);
@@ -82,14 +141,14 @@ function llegir<T>(k: string, fallback: T): T {
   }
 }
 
-/** Una porta està oberta? Prioritat: manual > primera sempre oberta > mode circuit > data i hora. */
-function portaOberta(cfg: TeaserData, d: Dia, now: number, ovr: Overrides, flags: Flags): boolean {
+/** Una porta està oberta? Prioritat: manual > sempre oberta > mode circuit > data i hora. */
+function portaOberta(d: Dia, now: number, ovr: Overrides, flags: Flags): boolean {
   const o = ovr[d.dia];
   if (o === "open") return true;
   if (o === "blocked") return false;
-  if (d.dia === cfg.dies[0]?.dia) return true; // la primera porta sempre oberta
+  if (d.sempreOberta) return true;
   if (flags.circuit) return true;
-  return now >= obertura(cfg, d, flags.senseHores);
+  return now >= obertura(d, flags.senseHores);
 }
 
 const COLORS = ["#ffd93d", "#4d96ff", "#ff6b6b", "#6bcb77", "#b983ff"];
@@ -104,17 +163,8 @@ export function Teaser() {
   const [oberta, setOberta] = useState<number | null>(null);
   const [avis, setAvis] = useState<string | null>(null);
 
-  // Contingut editable: codi ← recuerdos.json publicat ← canvis locals del panell
-  const [cfg, setCfg] = useState<TeaserData>(() => mergeTeaser(loadLocalTeaser()));
-  useEffect(() => {
-    loadPublished()
-      .then(() => setCfg(mergeTeaser(getPublishedTeaser() as Partial<TeaserData> | null, loadLocalTeaser())))
-      .catch(() => { /* sense connexió: es queda amb el local */ });
-  }, []);
-
   const esAdmin = new URLSearchParams(window.location.search).get("admin") === ADMIN_KEY;
   const modeProva = simT !== null || flags.circuit;
-  const HORA = `${String(cfg.hora).padStart(2, "0")}:00`;
 
   useEffect(() => {
     const t = setInterval(() => setTick((n) => n + 1), 1000);
@@ -133,18 +183,17 @@ export function Teaser() {
   }, [rascades, ovr, flags, simT]);
 
   const now = Date.now() + offset;
-  const DIES_CFG = cfg.dies;
-  const propera = DIES_CFG.find((d) => !portaOberta(cfg, d, now, ovr, flags)) || null;
-  const dia = oberta !== null ? DIES_CFG.find((d) => d.dia === oberta) || null : null;
-  const totRascat = rascades.length >= DIES_CFG.length;
+  const propera = CALENDARI.find((d) => !portaOberta(d, now, ovr, flags)) || null;
+  const dia = oberta !== null ? CALENDARI.find((d) => d.dia === oberta) || null : null;
+  const totRascat = rascades.length >= CALENDARI.length;
 
   const tocar = (d: Dia) => {
-    if (!portaOberta(cfg, d, now, ovr, flags)) {
+    if (!portaOberta(d, now, ovr, flags)) {
       playSound("fail");
       setAvis(
         ovr[d.dia] === "blocked"
           ? "Aquesta porta està blocada ara mateix."
-          : `Encara no! Aquesta porta s'obre ${quanTxt(cfg, d, now)} a les ${HORA}.`
+          : `Encara no! Aquesta porta s'obre ${quanTxt(d, now)} a les ${HORA}.`
       );
       setTimeout(() => setAvis(null), 2800);
       return;
@@ -157,13 +206,12 @@ export function Teaser() {
   const alRascar = (d: Dia) => {
     playSound("ok");
     vibrate(60);
-    const esUltima = d.dia === DIES_CFG[DIES_CFG.length - 1]?.dia;
     setTimeout(() => {
       setRascades((prev) => (prev.includes(d.dia) ? prev : [...prev, d.dia]));
       playSound("reveal");
       vibrate([100, 60, 150]);
       confetti(
-        esUltima
+        d.gran
           ? { particleCount: 220, spread: 120, origin: { y: 0.55 }, colors: COLORS }
           : { particleCount: 90, spread: 70, origin: { y: 0.6 }, colors: COLORS }
       );
@@ -176,7 +224,7 @@ export function Teaser() {
     <main className="tarjeta animate-pop-in">
       <div className="cabecera mb-2 flex items-center justify-between">
         <span className="mundo">El Minion trapella</span>
-        <span className="mundo" style={{ color: "#9a8a70" }}>{rascades.length} / {DIES_CFG.length} pistes</span>
+        <span className="mundo" style={{ color: "#9a8a70" }}>{rascades.length} / {CALENDARI.length} pistes</span>
       </div>
 
       {modeProva && (
@@ -194,19 +242,19 @@ export function Teaser() {
           </p>
 
           <div className="mt-3 space-y-2">
-            {DIES_CFG.map((d) => {
-              const oberta_ = portaOberta(cfg, d, now, ovr, flags);
+            {CALENDARI.map((d) => {
+              const oberta_ = portaOberta(d, now, ovr, flags);
               const motiu =
                 ovr[d.dia] === "open" ? "oberta a mà"
                 : ovr[d.dia] === "blocked" ? "bloquejada a mà"
-                : d.dia === DIES_CFG[0]?.dia ? "sempre oberta"
+                : d.sempreOberta ? "sempre oberta"
                 : flags.circuit ? "mode circuit"
                 : "automàtic";
               return (
                 <div key={d.dia} className="rounded-xl bg-white/5 p-2">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-bold">
-                      {d.emoji} {etiqueta(cfg, d)}{" "}
+                      {d.emoji} {etiqueta(d)}{" "}
                       <span className={`ml-1 rounded px-1.5 py-0.5 text-[10px] ${oberta_ ? "bg-emerald-400/20 text-emerald-300" : "bg-red-400/20 text-red-300"}`}>
                         {oberta_ ? "🔓 oberta" : "🔒 tancada"} · {motiu}
                       </span>
@@ -236,7 +284,7 @@ export function Teaser() {
               onClick={() => setFlags((f) => ({ ...f, senseHores: !f.senseHores }))}
               className={`w-full rounded-xl px-3 py-2 text-left text-xs font-bold ${flags.senseHores ? "bg-amber-300 text-stone-900" : "bg-white/10 hover:bg-white/20"}`}
             >
-              🕐 Obrir sense hores: {flags.senseHores ? "SÍ (des de les 00:00)" : `no (cal esperar les ${HORA})`}
+              🕐 Obrir sense hores: {flags.senseHores ? "SÍ (des de les 00:00)" : "no (cal esperar les 08:00)"}
             </button>
             <button
               onClick={() => setFlags((f) => ({ ...f, circuit: !f.circuit }))}
@@ -261,8 +309,8 @@ export function Teaser() {
           <p className="mt-3 text-[11px] font-black uppercase tracking-wider text-white/50">Provar-ho</p>
           <div className="mt-1 flex flex-wrap gap-1.5">
             <a href={`${base}?sorpresa=1`} className="rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-bold hover:bg-white/20">👀 Com ho veu ella</a>
-            {DIES_CFG.map((d) => (
-              <a key={d.dia} href={`${base}?sorpresa=1&ara=${cfg.any}-${String(MES).padStart(2, "0")}-${String(d.dia).padStart(2, "0")}T09:00`} className="rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-bold hover:bg-white/20">
+            {CALENDARI.map((d) => (
+              <a key={d.dia} href={`${base}?sorpresa=1&ara=${ANY}-11-0${d.dia}T09:00`} className="rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-bold hover:bg-white/20">
                 {d.dia} nov
               </a>
             ))}
@@ -281,20 +329,20 @@ export function Teaser() {
             <MinionImg size={100} anim={totRascat ? "minion-salt" : "minion-anim"} />
           </div>
           <h1 className="titol mt-2">Quatre portes, quatre dies</h1>
-          <section className="pista">{cfg.missatgeInicial}</section>
+          <section className="pista">{MISSATGE_INICIAL}</section>
 
           {propera && (
             <div className="mt-4 rounded-2xl bg-stone-900 px-4 py-3 text-white shadow-md">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-200">
-                Propera porta · {etiqueta(cfg, propera)} a les {flags.senseHores ? "00:00" : HORA}
+                Propera porta · {etiqueta(propera)} a les {flags.senseHores ? "00:00" : HORA}
               </p>
-              <p className="mt-1 text-3xl font-bold tabular-nums">{formatRestant(obertura(cfg, propera, flags.senseHores) - now)}</p>
+              <p className="mt-1 text-3xl font-bold tabular-nums">{formatRestant(obertura(propera, flags.senseHores) - now)}</p>
             </div>
           )}
 
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {DIES_CFG.map((d) => {
-              const oberta_ = portaOberta(cfg, d, now, ovr, flags);
+            {CALENDARI.map((d) => {
+              const oberta_ = portaOberta(d, now, ovr, flags);
               const feta = rascades.includes(d.dia);
               return (
                 <button
@@ -307,7 +355,7 @@ export function Teaser() {
                   <span className="text-3xl">{oberta_ ? d.emoji : "🔒"}</span>
                   <span className="text-lg font-bold tabular-nums text-stone-800">{d.dia} nov</span>
                   <span className={`text-[10px] font-semibold ${feta ? "text-emerald-600" : oberta_ ? "text-orange-600" : "text-stone-400"}`}>
-                    {feta ? "✓ Vista" : oberta_ ? "Rasca!" : `${quanTxt(cfg, d, now)}, ${flags.senseHores ? "00:00" : HORA}`}
+                    {feta ? "✓ Vista" : oberta_ ? "Rasca!" : `${quanTxt(d, now)}, ${flags.senseHores ? "00:00" : HORA}`}
                   </span>
                 </button>
               );
@@ -325,7 +373,7 @@ export function Teaser() {
           </button>
           <div className="icono">{dia.emoji}</div>
           <h1 className="titol">{dia.titol}</h1>
-          <p className="subtitulo">{etiqueta(cfg, dia)}</p>
+          <p className="subtitulo">{etiqueta(dia)}</p>
 
           {!rascades.includes(dia.dia) ? (
             <>
@@ -346,7 +394,7 @@ export function Teaser() {
               </div>
 
               <div className="mx-auto mb-3 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-stone-700 shadow-sm ring-1 ring-amber-200">
-                <span className="text-2xl">{dia.cosaEmoji}</span> Has trobat: {dia.cosaNom}
+                <span className="text-2xl">{dia.cosa.emoji}</span> Has trobat: {dia.cosa.nom}
               </div>
 
               {dia.foto && (

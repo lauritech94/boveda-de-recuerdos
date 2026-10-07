@@ -3,8 +3,7 @@ import { X, Download, Upload, ImagePlus, ChevronDown, ChevronUp, Printer, Trash2
 import { EMOTIONS, EmotionKey, FINAL_DEFAULT, Memory, MemoryKind } from "../data/memories";
 import { GAME_DEFS, GAME_KEYS } from "../games/registry";
 import { Sphere } from "./Sphere";
-import { exportAll, fileToDataUrl, importAll, loadPublished, onSaveStatus, publishedIsStale, flushLocal, hasLocalOverrides, getLocalBaseSig, clearLocalOverrides, getPublishedTeaser, Progress } from "../data/store";
-import { TeaserData, TeaserDia, diffTeaser, loadLocalTeaser, mergeTeaser, saveLocalTeaser } from "../data/teaserData";
+import { exportAll, fileToDataUrl, importAll, loadPublished, onSaveStatus, publishedIsStale, flushLocal, hasLocalOverrides, getLocalBaseSig, clearLocalOverrides, Progress } from "../data/store";
 
 type Props = {
   memories: Memory[];
@@ -182,12 +181,6 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
   const [stale, setStale] = useState(false);
   // Avís de desat: mai bloqueja, només informa (abans sortia un alert en cada lletra)
   const [saveWarn, setSaveWarn] = useState(false);
-  // Calendari (?sorpresa=1): editable aquí, s'exporta dins del recuerdos.json
-  const [teaser, setTeaser] = useState<TeaserData>(() => mergeTeaser(loadLocalTeaser()));
-  const [showTeaser, setShowTeaser] = useState(false);
-  const [teaserDiaObert, setTeaserDiaObert] = useState<number | null>(null);
-  const updateTeaser = (t: TeaserData) => { setTeaser(t); saveLocalTeaser(t); };
-  const updateTeaserDia = (nd: TeaserDia) => updateTeaser({ ...teaser, dies: teaser.dies.map((d) => (d.dia === nd.dia ? nd : d)) });
   // Quina versió es veu: la publicada o canvis locals encara sense publicar
   const [localPending, setLocalPending] = useState(false);
   useEffect(() => {
@@ -198,8 +191,6 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
       setPubFinalPhoto(pub?.final?.photo || "");
       setStale(publishedIsStale());
       setLocalPending(!!pub && hasLocalOverrides() && getLocalBaseSig() === pub.sig);
-      // Carrega el calendari publicat (si n'hi ha) per sota dels canvis locals
-      setTeaser(mergeTeaser(getPublishedTeaser() as Partial<TeaserData> | null, loadLocalTeaser()));
     });
   }, []);
 
@@ -223,7 +214,7 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
           </div>
           <div className="flex flex-wrap gap-2">
             <button onClick={onPrint} className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-black hover:bg-white/20"><Printer className="h-4 w-4" /> Imprimir fichas</button>
-            <button onClick={() => exportAll(memories, final, "recuerdos.json", diffTeaser(teaser))} className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-black hover:bg-white/20"><Download className="h-4 w-4" /> Exportar recuerdos.json</button>
+            <button onClick={() => exportAll(memories, final)} className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-black hover:bg-white/20"><Download className="h-4 w-4" /> Exportar recuerdos.json</button>
             <button onClick={() => importRef.current?.click()} className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-black hover:bg-white/20"><Upload className="h-4 w-4" /> Importar</button>
             <input ref={importRef} type="file" accept="application/json" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const d = await importAll(f); onChange(d.memories); onChangeFinal(d.final); alert("Importado correctamente."); } catch { alert("Archivo no válido."); } }} />
             <button onClick={onClose} className="inline-flex items-center gap-1.5 rounded-lg bg-amber-300 px-3 py-2 text-xs font-black text-stone-900 hover:bg-amber-200"><Save className="h-4 w-4" /> Guardar y volver</button>
@@ -252,7 +243,7 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
           <div className="mb-4 rounded-2xl border-2 border-sky-300 bg-sky-300/15 p-4">
             <p className="font-black text-sky-200">ℹ️ El <code>recuerdos.json</code> publicat és d'una versió anterior del codi</p>
             <p className="mt-1 text-xs font-semibold text-white/70">S'han aplicat les <b>fotos, peus de foto i missatges</b> que hi havia. Els <b>títols, pistes i textos</b> han tornat als valors nous del codi. Si vols mantenir canvis de text que vas fer al panell, torna'ls a escriure aquí i prem <b>Exportar recuerdos.json</b>.</p>
-            <button onClick={() => exportAll(memories, final, "recuerdos.json", diffTeaser(teaser))} className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-sky-300 px-3 py-2 text-xs font-black text-stone-900 hover:bg-sky-200"><Download className="h-4 w-4" /> Regenerar recuerdos.json</button>
+            <button onClick={() => exportAll(memories, final)} className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-sky-300 px-3 py-2 text-xs font-black text-stone-900 hover:bg-sky-200"><Download className="h-4 w-4" /> Regenerar recuerdos.json</button>
           </div>
         )}
 
@@ -270,7 +261,7 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
               <li>En GitHub, entra en la carpeta <code className="text-emerald-300">public</code> → <b>Add file → Upload files</b> y sube ese archivo (sustituye al anterior).</li>
               <li>Espera a que <b>Actions</b> salga en verde y haz un refresco fuerte (Ctrl+F5).</li>
             </ol>
-            <button onClick={() => exportAll(memories, final, "recuerdos.json", diffTeaser(teaser))} className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-300 px-3 py-2 text-xs font-black text-stone-900 hover:bg-amber-200"><Download className="h-4 w-4" /> Descargar recuerdos.json ahora</button>
+            <button onClick={() => exportAll(memories, final)} className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-300 px-3 py-2 text-xs font-black text-stone-900 hover:bg-amber-200"><Download className="h-4 w-4" /> Descargar recuerdos.json ahora</button>
           </div>
         )}
         {totalUnpublished === 0 && pubPhotos !== null && memories.some((m) => !!m.photo) && (
@@ -351,111 +342,6 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
                 </div>
                 <PhotoField value={final.photo} onChange={(v) => onChangeFinal({ ...final, photo: v })} />
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* ══════ CALENDARI D'ANTICIPACIÓ (?sorpresa=1) ══════ */}
-        <div className="mb-4 overflow-hidden rounded-2xl border border-pink-300/30 bg-gradient-to-br from-pink-300/10 to-amber-300/10">
-          <button onClick={() => setShowTeaser(!showTeaser)} className="flex w-full items-center justify-between px-4 py-3 text-left">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">🗓️</span>
-              <div>
-                <p className="font-black">Calendari d'anticipació (les 4 portes del 4 al 7 de novembre)</p>
-                <p className="text-xs font-semibold text-white/50">Enllaç <code>?sorpresa=1</code> · textos, icones, hora d'obertura…</p>
-              </div>
-            </div>
-            {showTeaser ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-          </button>
-          {showTeaser && (
-            <div className="space-y-4 border-t border-white/10 p-4">
-              <p className="rounded-xl bg-white/5 p-3 text-[11px] font-semibold text-white/60">
-                Tots els textos en catalán. Com sempre: en acabar, <b>Exportar recuerdos.json</b> i pujar-lo. El progrés de rascades no es toca des d'aquí (això és al panell de control de <code>?sorpresa=1&admin=minion2026</code>).
-              </p>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className={labelCls}>Any</label>
-                  <input type="number" value={teaser.any} onChange={(e) => updateTeaser({ ...teaser, any: parseInt(e.target.value) || teaser.any })} className={inputCls} />
-                </div>
-                <div>
-                  <label className={labelCls}>Hora d'obertura de les portes (0-23)</label>
-                  <input type="number" min={0} max={23} value={teaser.hora} onChange={(e) => { const h = parseInt(e.target.value); if (!isNaN(h) && h >= 0 && h <= 23) updateTeaser({ ...teaser, hora: h }); }} className={inputCls} />
-                </div>
-              </div>
-
-              <div>
-                <label className={labelCls}>Missatge inicial (sota el Minion, a la vista de les portes)</label>
-                <textarea rows={5} value={teaser.missatgeInicial} onChange={(e) => updateTeaser({ ...teaser, missatgeInicial: e.target.value })} className={inputCls} />
-              </div>
-
-              <div className="space-y-2">
-                {teaser.dies.map((d, i) => {
-                  const openDia = teaserDiaObert === d.dia;
-                  return (
-                    <div key={d.dia} className={`overflow-hidden rounded-xl border ${openDia ? "border-pink-300/40 bg-white/[0.06]" : "border-white/10 bg-white/[0.03]"}`}>
-                      <button onClick={() => setTeaserDiaObert(openDia ? null : d.dia)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left">
-                        <span className="text-2xl">{d.emoji}</span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-black">Porta {i + 1} · {d.dia} de novembre · {d.titol}</p>
-                          <p className="truncate text-[11px] font-semibold text-white/50">
-                            {i === 0 ? "Sempre oberta (dia de l'aniversari)" : `S'obre a les ${String(teaser.hora).padStart(2, "0")}:00`} · Sota la capa: «{d.secret.replace(/\n/g, " ")}»
-                          </p>
-                        </div>
-                        {openDia ? <ChevronUp className="h-4 w-4 text-white/50" /> : <ChevronDown className="h-4 w-4 text-white/50" />}
-                      </button>
-                      {openDia && (
-                        <div className="grid gap-3 border-t border-white/10 p-3 md:grid-cols-2">
-                          <div className="space-y-2">
-                            <div className="grid grid-cols-[72px_1fr] gap-2">
-                              <div>
-                                <label className={labelCls}>Icona</label>
-                                <input value={d.emoji} onChange={(e) => updateTeaserDia({ ...d, emoji: e.target.value })} className={`${inputCls} text-center text-xl`} />
-                              </div>
-                              <div>
-                                <label className={labelCls}>Títol de la porta</label>
-                                <input value={d.titol} onChange={(e) => updateTeaserDia({ ...d, titol: e.target.value })} className={inputCls} />
-                              </div>
-                            </div>
-                            <div>
-                              <label className={labelCls}>Text ABANS de rascar</label>
-                              <textarea rows={4} value={d.intro} onChange={(e) => updateTeaserDia({ ...d, intro: e.target.value })} className={inputCls} />
-                            </div>
-                            <div>
-                              <label className={labelCls}>Sota la capa de plata (curt! màx. 2 línies)</label>
-                              <textarea rows={2} value={d.secret} onChange={(e) => updateTeaserDia({ ...d, secret: e.target.value })} className={inputCls} />
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <div className="grid grid-cols-[72px_1fr] gap-2">
-                              <div>
-                                <label className={labelCls}>Icona troballa</label>
-                                <input value={d.cosaEmoji} onChange={(e) => updateTeaserDia({ ...d, cosaEmoji: e.target.value })} className={`${inputCls} text-center text-xl`} />
-                              </div>
-                              <div>
-                                <label className={labelCls}>Nom de la troballa («Has trobat: …»)</label>
-                                <input value={d.cosaNom} onChange={(e) => updateTeaserDia({ ...d, cosaNom: e.target.value })} className={inputCls} />
-                              </div>
-                            </div>
-                            <div>
-                              <label className={labelCls}>Missatge DESPRÉS de rascar</label>
-                              <textarea rows={5} value={d.text} onChange={(e) => updateTeaserDia({ ...d, text: e.target.value })} className={inputCls} />
-                            </div>
-                            <div>
-                              <label className={labelCls}>Foto (opcional, ruta tipus fotos/porta-{d.dia}.jpg)</label>
-                              <input value={d.foto || ""} onChange={(e) => updateTeaserDia({ ...d, foto: e.target.value || undefined })} className={inputCls} placeholder="fotos/…" />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              <p className="text-[11px] font-semibold text-white/40">
-                URL de la targeta NFC del calendari: <code className="text-emerald-300">{window.location.origin}{window.location.pathname}?sorpresa=1</code>
-              </p>
             </div>
           )}
         </div>
