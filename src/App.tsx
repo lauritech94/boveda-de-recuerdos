@@ -100,6 +100,35 @@ export default function App() {
     if (p.get("editar") === "1") setEditing(true);
   }, []);
 
+  // 🔄 AUTO-ACTUALITZACIÓ: els mòbils guarden l'index.html en memòria cau i poden quedar-se
+  // amb una versió antiga encara que pugem canvis. Aquí es demana al servidor la versió
+  // fresca (amb ?check= per saltar-se la cau), se'n calcula una empremta i, si és diferent
+  // de la que es va veure per última vegada, es recarrega la pàgina amb una URL única
+  // perquè el navegador es baixi el codi nou. Només fa UNA recàrrega quan hi ha versió nova.
+  useEffect(() => {
+    const KEY_SIG = "app_html_sig";
+    fetch(`${window.location.pathname}?check=${Date.now()}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.text() : null))
+      .then((html) => {
+        if (!html) return;
+        let h = 5381;
+        for (let i = 0; i < html.length; i++) h = ((h << 5) + h + html.charCodeAt(i)) | 0;
+        const sig = `${html.length}-${(h >>> 0).toString(36)}`;
+        let old: string | null = null;
+        try {
+          old = localStorage.getItem(KEY_SIG);
+          localStorage.setItem(KEY_SIG, sig);
+        } catch { /* sense localStorage no es pot comparar */ }
+        if (old && old !== sig) {
+          // Hi ha una versió nova publicada: recàrrega amb URL única (esquiva la cau)
+          const url = new URL(window.location.href);
+          url.searchParams.set("actualitzacio", sig.slice(-6));
+          window.location.replace(url.toString());
+        }
+      })
+      .catch(() => { /* sense connexió: es continua amb la versió actual */ });
+  }, []);
+
   useEffect(() => {
     // Neteja de dades locals antigues de versions anteriors (fosa per a cada canvi de codi)
     cleanupOldContentKeys();

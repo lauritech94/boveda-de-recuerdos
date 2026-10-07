@@ -160,27 +160,9 @@ const LEGACY: Record<number, { fields?: Partial<Record<LegacyField, string[]>>; 
   29: { fields: { title: ["La nostra història"], when: ["Fins avui"], hint: ["Ordena els capítols de la nostra vida. Tu ja saps el final."], gameWhy: ["Ordenar cronològicament els grans moments."] } },
 };
 
-/** Claus d'emoció vàlides + traducció de les antigues en castellà. Si una dada guardada
- *  porta una emoció desconeguda, es descarta: així mai pot deixar la targeta en blanc. */
-const EMO_MAP: Record<string, string> = {
-  alegria: "alegria", tristesa: "tristesa", rabia: "rabia", fastic: "fastic", por: "por",
-  tristeza: "tristesa", ira: "rabia", asco: "fastic", miedo: "por",
-};
-function normEmotion(c: Partial<Memory>) {
-  if (c.emotion !== undefined) {
-    const v = EMO_MAP[String(c.emotion)];
-    if (v) (c as Record<string, unknown>).emotion = v; else delete c.emotion;
-  }
-  if (c.emotion2 !== undefined) {
-    const v = EMO_MAP[String(c.emotion2)];
-    if (v) (c as Record<string, unknown>).emotion2 = v; else delete c.emotion2;
-  }
-}
-
 function cleanLegacy(o: Partial<Memory> | undefined): Partial<Memory> | undefined {
   if (!o || typeof o.id !== "number") return o;
   const c: Partial<Memory> = { ...o };
-  normEmotion(c);
   // Esfera 1: el text antic del Minion (amb variants) ara és a la targeta d'inici
   if (o.id === 1 && typeof c.hint === "string" && c.hint.includes("Minion molt trapella")) delete c.hint;
   const legacy = LEGACY[o.id];
