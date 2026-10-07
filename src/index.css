@@ -17,6 +17,9 @@
 
 * { box-sizing: border-box; }
 
+/* La web té els seus propis colors: el mode fosc del mòbil no els ha d'invertir */
+:root { color-scheme: light only; }
+
 html { scroll-behavior: smooth; }
 
 body {

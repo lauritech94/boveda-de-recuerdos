@@ -1,56 +1,130 @@
 import { useEffect, useRef, useState } from "react";
 import { GameProps, GameHeader, WinBanner, useElapsed, shuffle, formatTime, safeEmoji } from "./common";
 
-/* SOPA DE LLETRES */
-const SOUP_WORDS = ["GAT", "PA", "SOL"];
-const SOUP_GRID = [
-  ["G", "A", "T", "U", "X", "M"],
-  ["L", "O", "R", "E", "S", "A"],
-  ["P", "A", "D", "L", "O", "R"],
-  ["E", "S", "O", "L", "T", "C"],
-  ["R", "I", "U", "N", "A", "O"],
-  ["T", "O", "M", "A", "T", "E"],
-];
-const SOUP_CELLS: Record<string, string[]> = { GAT: ["0-0", "0-1", "0-2"], PA: ["2-0", "2-1"], SOL: ["3-1", "3-2", "3-3"] };
-export function GameSoup({ onComplete }: GameProps) {
+/* SOPA DE LLETRES (paraules editables des del panell) */
+const SOUP_DEFAULT = ["GAT", "PA", "SOL"];
+const SOUP_FILL = "AEIOUSRNLTCDMPBG";
+
+/** Majúscules, sense accents ni espais (però conservant la Ç). */
+function soupNorm(w: string): string {
+  return Array.from(w.toUpperCase())
+    .map((ch) => (ch === "Ç" ? "Ç" : ch.normalize("NFD").replace(/[\u0300-\u036f]/g, "")))
+    .join("")
+    .replace(/[^A-ZÇ]/g, "");
+}
+
+type SoupLayout = { size: number; grid: string[][]; cells: Record<string, string[]> };
+
+/** Col·loca les paraules en horitzontal (→) o vertical (↓) sense encavalcar-les i omple la resta amb lletres a l'atzar. */
+function buildSoup(words: string[]): SoupLayout {
+  const longest = Math.max(...words.map((w) => w.length));
+  const letters = words.reduce((s, w) => s + w.length, 0);
+  let size = Math.min(9, Math.max(6, longest, Math.ceil(Math.sqrt(letters * 2.2))));
+  for (; size <= 10; size++) {
+    for (let attempt = 0; attempt < 250; attempt++) {
+      const grid: (string | null)[][] = Array.from({ length: size }, () => Array(size).fill(null));
+      const cells: Record<string, string[]> = {};
+      let ok = true;
+      // Les més llargues primer: costa més de col·locar-les
+      for (const w of [...words].sort((a, b) => b.length - a.length)) {
+        let placed = false;
+        for (let t = 0; t < 120 && !placed; t++) {
+          const horiz = Math.random() < 0.5;
+          const r = Math.floor(Math.random() * (horiz ? size : size - w.length + 1));
+          const c = Math.floor(Math.random() * (horiz ? size - w.length + 1 : size));
+          const pos = Array.from(w).map((_, i) => (horiz ? [r, c + i] : [r + i, c]));
+          if (pos.every(([rr, cc]) => grid[rr][cc] === null)) {
+            pos.forEach(([rr, cc], i) => { grid[rr][cc] = w[i]; });
+            cells[w] = pos.map(([rr, cc]) => `${rr}-${cc}`);
+            placed = true;
+          }
+        }
+        if (!placed) { ok = false; break; }
+      }
+      if (ok) {
+        const full = grid.map((row) => row.map((ch) => ch ?? SOUP_FILL[Math.floor(Math.random() * SOUP_FILL.length)]));
+        return { size, grid: full, cells };
+      }
+    }
+  }
+  // No hauria de passar mai amb paraules de fins a 8 lletres
+  return { size: 6, grid: Array.from({ length: 6 }, () => Array(6).fill("A")), cells: {} };
+}
+
+export function GameSoup({ onComplete, config }: GameProps) {
+  const [words] = useState<string[]>(() => {
+    const list = String(config?.words || "")
+      .split(/[,\n]/)
+      .map(soupNorm)
+      .filter((w) => w.length >= 2 && w.length <= 8);
+    const uniq = Array.from(new Set(list)).slice(0, 6);
+    return uniq.length ? uniq : SOUP_DEFAULT;
+  });
+  const [layout, setLayout] = useState<SoupLayout>(() => buildSoup(words));
   const [sel, setSel] = useState<string[]>([]);
   const [found, setFound] = useState<string[]>([]);
   const [won, setWon] = useState(false);
   const { secs } = useElapsed(!won);
+  const maxSel = Math.max(...words.map((w) => w.length)) + 2;
 
   const toggleCell = (r: number, c: number) => {
     if (won) return;
     const key = `${r}-${c}`;
-    if (found.some((w) => SOUP_CELLS[w].includes(key))) return;
-    if (sel.includes(key)) setSel(sel.filter((s) => s !== key));
-    else {
-      const ns = [...sel, key]; setSel(ns);
-      for (const w of SOUP_WORDS) {
-        if (!found.includes(w) && SOUP_CELLS[w].every((cell) => ns.includes(cell))) {
-          const nf = [...found, w]; setFound(nf); setSel([]);
-          if (nf.length === SOUP_WORDS.length) { setWon(true); onComplete(600 - secs, "3 paraules"); }
-          return;
-        }
+    if (found.some((w) => layout.cells[w]?.includes(key))) return;
+    if (sel.includes(key)) { setSel(sel.filter((s) => s !== key)); return; }
+    const ns = [...sel, key];
+    setSel(ns);
+    for (const w of words) {
+      if (!found.includes(w) && layout.cells[w]?.every((cell) => ns.includes(cell))) {
+        const nf = [...found, w];
+        setFound(nf);
+        setSel([]);
+        if (nf.length === words.length) { setWon(true); onComplete(600 - secs, `${words.length} paraules`); }
+        return;
       }
-      if (ns.length > 6) setSel([]);
     }
+    if (ns.length > maxSel) setSel([]);
   };
   const isSel = (k: string) => sel.includes(k);
-  const isFound = (k: string) => found.some((w) => SOUP_CELLS[w].includes(k));
+  const isFound = (k: string) => found.some((w) => layout.cells[w]?.includes(k));
+  const reset = () => { setLayout(buildSoup(words)); setFound([]); setSel([]); setWon(false); };
 
   return (
     <div>
-      <GameHeader instruction="Troba GAT, PA i SOL. Toca les seves lletres en ordre. Es pinten de verd." secs={secs} extra={<span className="rounded-full bg-lime-100 px-3 py-1 text-xs font-black text-lime-800">{found.length}/3</span>} />
+      <GameHeader
+        instruction="Troba les paraules amagades. Toca les seves lletres (en horitzontal o en vertical). Es pinten de verd."
+        secs={secs}
+        extra={<span className="rounded-full bg-lime-100 px-3 py-1 text-xs font-black text-lime-800">{found.length}/{words.length}</span>}
+      />
       {!won ? (
         <>
-          <div className="mx-auto grid max-w-[320px] grid-cols-6 gap-1.5">
-            {SOUP_GRID.map((row, r) => row.map((ch, c) => { const k = `${r}-${c}`; return (<button key={k} onClick={() => toggleCell(r, c)} className={`flex aspect-square items-center justify-center rounded-lg text-lg font-black transition-all active:scale-95 ${isFound(k) ? "bg-emerald-500 text-white" : isSel(k) ? "bg-amber-400 text-white ring-2 ring-amber-600" : "bg-white ring-1 ring-stone-200 hover:bg-amber-50"}`}>{ch}</button>); }))}
+          <div className="mx-auto grid max-w-[340px] gap-1" style={{ gridTemplateColumns: `repeat(${layout.size}, minmax(0, 1fr))` }}>
+            {layout.grid.map((row, r) =>
+              row.map((ch, c) => {
+                const k = `${r}-${c}`;
+                return (
+                  <button
+                    key={k}
+                    onClick={() => toggleCell(r, c)}
+                    className={`flex aspect-square items-center justify-center rounded-md font-black transition-all active:scale-95 ${layout.size > 7 ? "text-sm" : "text-lg"} ${isFound(k) ? "bg-emerald-500 text-white" : isSel(k) ? "bg-amber-400 text-white ring-2 ring-amber-600" : "bg-white ring-1 ring-stone-200"}`}
+                  >
+                    {ch}
+                  </button>
+                );
+              })
+            )}
           </div>
-          <div className="mt-3 flex justify-center gap-2">{SOUP_WORDS.map((w) => (<span key={w} className={`rounded-full px-3 py-1 text-xs font-black ${found.includes(w) ? "bg-emerald-500 text-white" : "bg-stone-200 text-stone-600"}`}>{found.includes(w) ? `✓ ${w}` : w}</span>))}</div>
+          <div className="mt-3 flex flex-wrap justify-center gap-2">
+            {words.map((w) => (
+              <span key={w} className={`rounded-full px-3 py-1 text-xs font-black ${found.includes(w) ? "bg-emerald-500 text-white" : "bg-stone-200 text-stone-600"}`}>
+                {found.includes(w) ? `✓ ${w}` : w}
+              </span>
+            ))}
+          </div>
           <button onClick={() => setSel([])} className="mx-auto mt-2 block text-xs font-bold text-stone-500 underline">Neteja la selecció</button>
         </>
       ) : (
-        <WinBanner title="Sopa completada! 🍲" subtitle={`Has trobat les 3 paraules en ${formatTime(secs)}.`} score={formatTime(secs)} onRestart={() => { setFound([]); setSel([]); setWon(false); }} />
+        <WinBanner title="Sopa completada! 🍲" subtitle={`Has trobat les ${words.length} paraules en ${formatTime(secs)}.`} score={formatTime(secs)} onRestart={reset} />
       )}
     </div>
   );
@@ -294,7 +368,8 @@ const ANAS = [
 export function GameAnagram({ onComplete, config }: GameProps) {
   const [LIST] = useState(() => {
     const lines = String(config?.words || "").split("\n").map((l) => l.trim()).filter(Boolean);
-    const parsed = lines.map((l) => { const [w, h] = l.split(":"); const word = (w || "").toUpperCase().replace(/[^A-ZÇÑ]/g, ""); return word.length >= 3 ? { word, hint: (h || "").trim() || "Sense pista" } : null; }).filter(Boolean) as typeof ANAS;
+    // Es conserven TOTES les lletres, també les accentuades (abans "CAFÈ" quedava "CAF")
+    const parsed = lines.map((l) => { const [w, h] = l.split(":"); const word = (w || "").toUpperCase().replace(/[^\p{L}]/gu, ""); return word.length >= 3 ? { word, hint: (h || "").trim() || "Sense pista" } : null; }).filter(Boolean) as typeof ANAS;
     return parsed.length ? parsed.slice(0, 5) : ANAS;
   });
   const [idx, setIdx] = useState(0);
@@ -331,6 +406,7 @@ export function GameAnagram({ onComplete, config }: GameProps) {
             {built.length === 0 && <span className="self-center text-sm font-bold text-stone-400">Toca les lletres…</span>}
             {built.map((l, i) => (<span key={i} className="flex h-11 w-9 items-center justify-center rounded-lg bg-stone-900 text-lg font-black text-white">{l}</span>))}
           </div>
+          {err && <p className="mt-2 text-sm font-bold text-red-600">❌ No és correcte. Torna-ho a provar!</p>}
           <div className="mt-3 flex flex-wrap justify-center gap-1.5">
             {scrambled[idx].map((l, i) => (<button key={i} onClick={() => tap(l, i)} disabled={used.includes(i)} className={`flex h-11 w-9 items-center justify-center rounded-lg text-lg font-black ring-1 transition-all active:scale-95 ${used.includes(i) ? "bg-stone-100 text-transparent ring-stone-200" : "bg-white ring-stone-300 hover:bg-fuchsia-50"}`}>{l}</button>))}
           </div>

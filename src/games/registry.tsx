@@ -50,7 +50,9 @@ export const GAME_DEFS: Record<string, GameDef> = {
     { key: "hints", label: "Pistas separadas por | (en catalán)", type: "text", placeholder: "Dia|Mes|Últim dígit de l'any" },
   ] },
   tictac: { key: "tictac", name: "Tres en ratlla", short: "Contra la CPU", time: "1 min", Comp: GameTicTac },
-  soup: { key: "soup", name: "Sopa de lletres", short: "3 paraules amagades", time: "1-2 min", Comp: GameSoup },
+  soup: { key: "soup", name: "Sopa de lletres", short: "Paraules amagades", time: "1-2 min", Comp: GameSoup, fields: [
+    { key: "words", label: "Palabras a encontrar, separadas por coma (2 a 6 palabras, de 2 a 8 letras)", type: "text", placeholder: "PLATJA,MAR,SORRA,SOL", help: "Los acentos y espacios se quitan solos. La sopa se genera automáticamente cada vez." },
+  ] },
   sequence: { key: "sequence", name: "Seqüència lògica", short: "5 sèries numèriques", time: "2 min", Comp: GameSequence },
   intruder: { key: "intruder", name: "L'intrús", short: "Troba el diferent, 5 rondes", time: "1 min", Comp: GameIntruder },
   flash: { key: "flash", name: "Memòria flash", short: "Memoritza 3, 4 i 5 emojis", time: "2 min", Comp: GameFlash, fields: [{ key: "emojis", label: "6-8 emojis separados por coma", type: "text", placeholder: "🍿,🎬,🛋️,🧣,🍫,😴,🥤,📺" }] },

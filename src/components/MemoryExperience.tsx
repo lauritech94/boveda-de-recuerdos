@@ -397,6 +397,8 @@ Portes ${othersUnlocked} de 29. Et falten ${29 - othersUnlocked}.`}</section>
         <div className="mt-4 flex justify-center">
           <button
             onClick={() => {
+              // Confirmació: evita saltar-se el repte per error (és just sota els botons del joc)
+              if (!window.confirm("Segur que vols saltar-te el repte i veure el record directament?")) return;
               setFailsCount((c) => c + 1);
               skipChallenge();
             }}

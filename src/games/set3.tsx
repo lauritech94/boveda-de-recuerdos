@@ -396,20 +396,26 @@ export function GameFlash({ onComplete, config }: GameProps) {
 }
 
 /* DAU 21 */
-/* Dau dibuixat amb punts (els símbols ⚀⚁⚂… es veuen malament en molts mòbils) */
+/* Dau dibuixat en SVG amb colors fixos (els símbols ⚀⚁⚂… es veuen malament en molts mòbils,
+   i alguns navegadors amb "mode fosc forçat" invertien els colors dels daus fets amb CSS) */
 const PIPS: Record<number, number[]> = { 1: [4], 2: [2, 6], 3: [2, 4, 6], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
-function Die({ v, size = 44 }: { v: number; size?: number }) {
+const PIP_XY = [20, 50, 80];
+function Die({ v, size = 46 }: { v: number; size?: number }) {
   return (
-    <span
-      className="animate-pop-in inline-grid shrink-0 grid-cols-3 grid-rows-3 rounded-lg bg-white p-[13%] shadow-md ring-1 ring-black/10"
-      style={{ width: size, height: size }}
+    <svg
+      viewBox="0 0 100 100"
+      width={size}
+      height={size}
+      className="animate-pop-in shrink-0"
+      role="img"
+      aria-label={`Dau: ${v}`}
+      style={{ filter: "drop-shadow(0 3px 4px rgba(0,0,0,.35))" }}
     >
-      {Array.from({ length: 9 }).map((_, i) => (
-        <span key={i} className="flex items-center justify-center">
-          {(PIPS[v] || []).includes(i) && <span className="block h-[62%] w-[62%] rounded-full bg-stone-800" />}
-        </span>
+      <rect x="3" y="3" width="94" height="94" rx="18" fill="#FFFFFF" stroke="#D6D3D1" strokeWidth="3" />
+      {(PIPS[v] || []).map((i) => (
+        <circle key={i} cx={PIP_XY[i % 3]} cy={PIP_XY[Math.floor(i / 3)]} r="9.5" fill="#1C1917" />
       ))}
-    </span>
+    </svg>
   );
 }
 
