@@ -349,9 +349,13 @@ export function GameScratch({ onComplete, config }: GameProps) {
         />
       </div>
       {revealed ? (
-        <div className="mt-4">
-          <WinBanner title="Descobert! ✨" subtitle="Has rascat la capa de plata." onRestart={reset} />
-        </div>
+        // config.senseBanner = "1" → no es mostra el cartell de victòria (el calendari ja passa
+        // tot sol al missatge del dia; abans sortia un "Torna-ho a provar" que despistava)
+        String(config?.senseBanner || "") !== "1" && (
+          <div className="mt-4">
+            <WinBanner title="Descobert! ✨" subtitle="Has rascat la capa de plata." onRestart={reset} />
+          </div>
+        )
       ) : (
         <p className="mt-3 text-center text-xs font-bold text-stone-400">Rasca més de la meitat per revelar-ho</p>
       )}

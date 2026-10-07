@@ -7,16 +7,17 @@ import { playSound, vibrate } from "./useSound";
 /**
  * 🗓️ CALENDARI D'ANTICIPACIÓ  ·  enllaç de l'NFC: ?sorpresa=1
  *
- * Una sola targeta NFC. Quatre portes (4, 5, 6 i 7 de novembre). Cada porta s'obre a les 08:00
- * del seu dia; ella l'ha de rascar i en surt una "cosa" que va al sac del Minion.
- * Tots els textos es poden canviar aquí mateix.
+ * Una sola targeta NFC. Quatre portes (4, 5, 6 i 7 de novembre).
+ * La primera SEMPRE està oberta (és la del seu aniversari, es dóna aquell dia).
+ * Les altres s'obren a les 08:00 del seu dia.
  *
- * ─── PROVES (només nosaltres) ────────────────────────────────────────────────
- *   ?sorpresa=1&admin=minion2026                 → panell de control amagat
- *   ?sorpresa=1&ara=2026-11-05T09:00             → simula un dia/hora concret
- * Des del panell pots bloquejar/obrir cada porta, fer que obrin sense hores
- * i activar el "mode circuit" per veure el recorregut sencer abes d'hora.
- * ─────────────────────────────────────────────────────────────────────────────
+ * ⚠️ IMPORTANT: les portes 2 i 3 no han de donar cap pista del joc de les esferes.
+ * Només la 4 revela on i a quina hora.
+ *
+ * ─── PROVES (només nosaltres) ───────────────────────────────────────────────
+ *   ?sorpresa=1&admin=minion2026       → panell de control amagat
+ *   ?sorpresa=1&ara=2026-11-05T09:00   → simula un dia/hora concret
+ * ────────────────────────────────────────────────────────────────────────────
  */
 const ANY = 2026;
 const MES = 11;
@@ -36,6 +37,7 @@ type Dia = {
   text: string;
   foto?: string;
   peu?: string;
+  sempreOberta?: boolean;
   gran?: boolean;
 };
 
@@ -49,40 +51,41 @@ export const CALENDARI: Dia[] = [
     secret: "DISSABTE\n7 de novembre 🔮",
     cosa: { emoji: "🍌", nom: "El plàtan del Minion" },
     text: "Aquest dissabte t'espera una aventura molt especial.\n\nUn Minion molt trapella té alguna cosa teva… i necessitarem la teva ajuda per recuperar-la.\n\nA partir d'avui, cada dia a les 08:00 s'obrirà una porta nova. Només has de tornar a obrir aquesta mateixa targeta. 💛",
+    sempreOberta: true,
   },
   {
     dia: 5,
-    emoji: "🗺️",
-    titol: "Un tros de mapa",
-    intro: "El Minion s'ha deixat caure un paper arrugat.\n\nSembla un mapa, però el més important està tapat. Rasca!",
-    secret: "Busca la\nprimera esfera 🔍",
-    cosa: { emoji: "🗺️", nom: "Un tros de mapa" },
-    text: "Hi ha 30 esferes i totes estan encriptades.\n\nNomés n'hi ha una que ja hem desxifrat nosaltres: la primera. Les altres depenen de tu.",
+    emoji: "🍌",
+    titol: "Ha passat per aquí",
+    intro: "Algú ha estat rondant per casa aquesta nit.\n\nHa deixat una cosa a terra, però està tot tapat. Rasca per veure què és!",
+    secret: "Una pell\nde plàtan 🍌",
+    cosa: { emoji: "👣", nom: "Unes petjades" },
+    text: "El Minion ha tornat a passar per aquí.\n\nNo sabem què busca ni on s'amaga, però cada nit deixa alguna cosa enrere.\n\nDemà hi tornarà. 👀",
   },
   {
     dia: 6,
-    emoji: "🔑",
-    titol: "La clau",
-    intro: "Demà és el gran dia, i el Minion porta una clau a la butxaca.\n\nTé una nota enganxada. Rasca per llegir-la!",
-    secret: "Demà\nel gran dia ✨",
-    cosa: { emoji: "🔑", nom: "La clau" },
-    text: "Deixa el mòbil carregat, busca un lloc còmode i avisa qui vulguis que t'acompanyi.\n\nHi haurà reptes, fotos, missatges i unes quantes sorpreses.",
+    emoji: "🔔",
+    titol: "Està nerviós",
+    intro: "Avui ha deixat caure una cosa amb molta pressa.\n\nSembla que té un pla per a demà… Rasca!",
+    secret: "Demà\nens veiem ✨",
+    cosa: { emoji: "⏰", nom: "Un rellotge" },
+    text: "El Minion està nerviós: demà és el seu gran dia… o el teu.\n\nDescansa bé aquesta nit i deixa el mòbil carregat.\n\nDemà ho entendràs tot. 💛",
   },
   {
     dia: 7,
     emoji: "🔮",
-    titol: "El gran dia",
+    titol: "Avui és el dia",
     intro: "Ha arribat el moment.\n\nLa darrera porta té el segell més gruixut de tots. Rasca fort!",
-    secret: "Ja pots\ncomençar 🔮",
-    cosa: { emoji: "🔮", nom: "L'esfera màgica" },
-    text: "Avui recuperaràs els teus records.\n\nUn Minion molt trapella te'ls va intentar robar, però els hem recuperat tots a temps. Només cal que els desxifris un per un.\n\nCada esfera amaga una foto i un missatge. Ningú sap què hi ha dins… ho hauràs de descobrir tu.\n\nBona sort. 💛",
+    secret: "A casa\ndels papes 🏠",
+    cosa: { emoji: "🎉", nom: "La sorpresa" },
+    text: "Avui, a les 17:00, a casa dels papes.\n\nVine amb ganes de jugar i de passar-t'ho bé: t'hi esperem tots. 💛\n\n(I el Minion també. Ell diu que no, però sí.)",
     gran: true,
   },
 ];
 
-const MISSATGE_INICIAL = `Un Minion molt trapella t'ha encriptat els records.
+const MISSATGE_INICIAL = `Un Minion molt trapella ronda per casa.
 
-Abans de recuperar-los hi ha quatre portes. Cada dia a les 08:00 se n'obre una de nova.
+Cada dia a les 08:00 s'obre una porta nova.
 
 Rasca-la i descobreix què t'ha deixat.`;
 
@@ -138,11 +141,12 @@ function llegir<T>(k: string, fallback: T): T {
   }
 }
 
-/** Una porta està oberta? Prioritat: manual > mode circuit > automàtic per data/hora. */
+/** Una porta està oberta? Prioritat: manual > sempre oberta > mode circuit > data i hora. */
 function portaOberta(d: Dia, now: number, ovr: Overrides, flags: Flags): boolean {
   const o = ovr[d.dia];
   if (o === "open") return true;
   if (o === "blocked") return false;
+  if (d.sempreOberta) return true;
   if (flags.circuit) return true;
   return now >= obertura(d, flags.senseHores);
 }
@@ -162,13 +166,11 @@ export function Teaser() {
   const esAdmin = new URLSearchParams(window.location.search).get("admin") === ADMIN_KEY;
   const modeProva = simT !== null || flags.circuit;
 
-  // El rellotge avança: les portes s'obren soles a les 08:00 amb la pàgina oberta
   useEffect(() => {
     const t = setInterval(() => setTick((n) => n + 1), 1000);
     return () => clearInterval(t);
   }, []);
 
-  // Es desen els canvis (només amb l'hora real: en mode prova no es toca res)
   useEffect(() => {
     if (simT !== null) return;
     try {
@@ -181,7 +183,7 @@ export function Teaser() {
   }, [rascades, ovr, flags, simT]);
 
   const now = Date.now() + offset;
-  const propera = CALENDARI.find((d) => now < obertura(d, flags.senseHores) && !ovr[d.dia]) || null;
+  const propera = CALENDARI.find((d) => !portaOberta(d, now, ovr, flags)) || null;
   const dia = oberta !== null ? CALENDARI.find((d) => d.dia === oberta) || null : null;
   const totRascat = rascades.length >= CALENDARI.length;
 
@@ -200,7 +202,7 @@ export function Teaser() {
     setOberta(d.dia);
   };
 
-  // En acabar de rascar: primer es deixa llegir el que hi ha sota, després passa al missatge
+  // En acabar de rascar: es deixa llegir el que hi ha sota i després passa al missatge
   const alRascar = (d: Dia) => {
     playSound("ok");
     vibrate(60);
@@ -226,8 +228,8 @@ export function Teaser() {
   return (
     <main className="tarjeta animate-pop-in">
       <div className="cabecera mb-2 flex items-center justify-between">
-        <span className="mundo">Els records del Minion</span>
-        <span className="mundo" style={{ color: "#9a8a70" }}>{rascades.length} / {CALENDARI.length} cosetes</span>
+        <span className="mundo">El Minion trapella</span>
+        <span className="mundo" style={{ color: "#9a8a70" }}>{rascades.length} / {CALENDARI.length} pistes</span>
       </div>
 
       {modeProva && (
@@ -241,14 +243,18 @@ export function Teaser() {
         <section className="mb-5 rounded-2xl border-2 border-stone-800 bg-stone-900 p-4 text-left text-white">
           <p className="text-sm font-black">🔧 Panell de control</p>
           <p className="mt-1 text-[11px] font-semibold text-white/60">
-            Només es veu si l'enllaç porta la clau. Ella no el veurà mai. Quan acabis, comprova que tot estigui en automàtic.
+            Només es veu si l'enllaç porta la clau. Quan acabis, deixa-ho tot en automàtic.
           </p>
 
-          {/* Estat de cada porta */}
           <div className="mt-3 space-y-2">
             {CALENDARI.map((d) => {
               const oberta_ = portaOberta(d, now, ovr, flags);
-              const motiu = ovr[d.dia] === "open" ? "oberta a mà" : ovr[d.dia] === "blocked" ? "bloquejada a mà" : flags.circuit ? "mode circuit" : "automàtic";
+              const motiu =
+                ovr[d.dia] === "open" ? "oberta a mà"
+                : ovr[d.dia] === "blocked" ? "bloquejada a mà"
+                : d.sempreOberta ? "sempre oberta"
+                : flags.circuit ? "mode circuit"
+                : "automàtic";
               return (
                 <div key={d.dia} className="rounded-xl bg-white/5 p-2">
                   <div className="flex items-center justify-between gap-2">
@@ -278,25 +284,23 @@ export function Teaser() {
             })}
           </div>
 
-          {/* Modes generals */}
           <div className="mt-3 space-y-1.5">
             <button
               onClick={() => setFlags((f) => ({ ...f, senseHores: !f.senseHores }))}
               className={`w-full rounded-xl px-3 py-2 text-left text-xs font-bold ${flags.senseHores ? "bg-amber-300 text-stone-900" : "bg-white/10 hover:bg-white/20"}`}
             >
-              🕐 Obrir sense hores: {flags.senseHores ? "SÍ (s'oben des de les 00:00)" : "no (cal esperar les 08:00)"}
+              🕐 Obrir sense hores: {flags.senseHores ? "SÍ (des de les 00:00)" : "no (cal esperar les 08:00)"}
             </button>
             <button
               onClick={() => setFlags((f) => ({ ...f, circuit: !f.circuit }))}
               className={`w-full rounded-xl px-3 py-2 text-left text-xs font-bold ${flags.circuit ? "bg-amber-300 text-stone-900" : "bg-white/10 hover:bg-white/20"}`}
             >
-              🔁 Mode circuit (veure el recorregut sencer): {flags.circuit ? "ACTIU" : "desactivat"}
+              🔁 Mode circuit (totes obertes): {flags.circuit ? "ACTIU" : "desactivat"}
             </button>
           </div>
 
-          {/* Accions */}
           <div className="mt-3 flex flex-wrap gap-1.5">
-            <button onClick={() => { if (confirm("Esborrar les cosetes rascades? (torna a començar)")) setRascades([]); }} className="rounded-lg bg-red-500/80 px-3 py-2 text-[11px] font-bold text-white hover:bg-red-500">
+            <button onClick={() => { if (confirm("Esborrar les pistes rascades?")) setRascades([]); }} className="rounded-lg bg-red-500/80 px-3 py-2 text-[11px] font-bold text-white hover:bg-red-500">
               Reset rascades
             </button>
             <button
@@ -307,18 +311,18 @@ export function Teaser() {
             </button>
           </div>
 
-          {/* Enllaços de prova */}
           <p className="mt-3 text-[11px] font-black uppercase tracking-wider text-white/50">Provar-ho</p>
           <div className="mt-1 flex flex-wrap gap-1.5">
             <a href={`${base}?sorpresa=1`} className="rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-bold hover:bg-white/20">👀 Com ho veu ella</a>
-            <a href={`${base}?sorpresa=1&ara=2026-11-04T09:00`} className="rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-bold hover:bg-white/20">4 nov</a>
-            <a href={`${base}?sorpresa=1&ara=2026-11-05T09:00`} className="rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-bold hover:bg-white/20">5 nov</a>
-            <a href={`${base}?sorpresa=1&ara=2026-11-06T09:00`} className="rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-bold hover:bg-white/20">6 nov</a>
-            <a href={`${base}?sorpresa=1&ara=2026-11-07T09:00`} className="rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-bold hover:bg-white/20">7 nov</a>
+            {CALENDARI.map((d) => (
+              <a key={d.dia} href={`${base}?sorpresa=1&ara=${ANY}-11-0${d.dia}T09:00`} className="rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-bold hover:bg-white/20">
+                {d.dia} nov
+              </a>
+            ))}
           </div>
 
           <p className="mt-3 text-[11px] font-bold text-amber-200">
-            ⚠️ Abans de donar-li el mòvil: prem «Tot automàtic» i comprova que cap porta digui «oberta a mà».
+            ⚠️ Abans de donar-li el mòbil: prem «Tot automàtic» i comprova que cap porta digui «oberta a mà».
           </p>
         </section>
       )}
@@ -363,7 +367,7 @@ export function Teaser() {
             })}
           </div>
 
-          {/* El sac del Minion */}
+          {/* El sac del Minion: sempre les 4 caselles, s'omplen a mesura que rasca */}
           <div className="mt-5 rounded-2xl bg-amber-50 p-3 ring-1 ring-amber-200">
             <p className="text-left text-[11px] font-semibold uppercase tracking-widest text-amber-800">
               🎒 El sac del Minion · {rascades.length}/{CALENDARI.length}
@@ -374,12 +378,12 @@ export function Teaser() {
                 return (
                   <div
                     key={d.dia}
-                    className={`flex aspect-square flex-col items-center justify-center rounded-xl text-center ${
+                    className={`flex aspect-square flex-col items-center justify-center rounded-xl px-1 text-center ${
                       ok ? "animate-pop-in bg-white ring-2 ring-amber-300" : "bg-stone-100 ring-1 ring-stone-200"
                     }`}
                   >
-                    <span className={`text-3xl ${ok ? "" : "opacity-30"}`}>{ok ? d.cosa.emoji : "❔"}</span>
-                    <span className="mt-0.5 px-1 text-[9px] font-semibold leading-tight text-stone-600">{ok ? d.cosa.nom : "?"}</span>
+                    <span className="text-2xl leading-none">{ok ? d.cosa.emoji : "❔"}</span>
+                    <span className="mt-1 text-[8px] font-semibold leading-tight text-stone-600">{ok ? d.cosa.nom : "?"}</span>
                   </div>
                 );
               })}
@@ -406,7 +410,7 @@ export function Teaser() {
               <div className="mt-4">
                 <GameScratch
                   key={dia.dia}
-                  config={{ secret: dia.secret, label: "Rasca per descobrir què t'ha deixat" }}
+                  config={{ secret: dia.secret, label: "Rasca per descobrir què t'ha deixat", senseBanner: "1" }}
                   onComplete={() => alRascar(dia)}
                 />
               </div>
