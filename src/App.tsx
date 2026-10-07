@@ -48,6 +48,7 @@ export default function App() {
     return new URLSearchParams(window.location.search).get("editar") === "1";
   });
 
+  const [ready, setReady] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [minionComment, setMinionComment] = useState<string | null>(null);
@@ -110,7 +111,10 @@ export default function App() {
     cleanupOldContentKeys();
     loadPublished()
       .then((pub) => {
-        if (!pub) return;
+        if (!pub) {
+          setReady(true);
+          return;
+        }
         const base = applyMemoryOverrides(DEFAULT_MEMORIES, pub.memories);
         const localIsStale = hasLocalOverrides() && getLocalBaseSig() !== pub.sig;
         if (localIsStale) {
@@ -121,8 +125,12 @@ export default function App() {
           setMemories(applyMemoryOverrides(base, loadLocalMemoryOverrides()));
           setFinal(mergeFinal(pub.final, loadLocalFinalOverride()));
         }
+        setReady(true);
       })
-      .catch(() => { /* es mantenen les memòries per defecte */ });
+      .catch(() => {
+        // En cas d'error de xarxa, es dóna pas a les memòries per defecte del codi
+        setReady(true);
+      });
   }, []);
 
   useEffect(() => {
@@ -198,6 +206,24 @@ export default function App() {
           onHome={goHome}
         />
         {printing && <PrintSheets memories={memories} onClose={() => setPrinting(false)} />}
+      </div>
+    );
+  }
+
+  /* ---------- CÀRREGA NEUTRA (evita el parpelleig del text per defecte) ---------- */
+  if (!ready && !editing) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <Fons />
+        <main className="tarjeta flex flex-col items-center py-14 text-center">
+          {active ? (
+            <Sphere emotion="alegria" size={110} locked pulse />
+          ) : (
+            <div className="animate-floaty"><MinionImg size={110} /></div>
+          )}
+          <h1 className="titol mt-5">{active ? `Esfera ${pad(active.id)}` : APP_NAME}</h1>
+          <p className="subtitulo">Obrint la càmera dels records…</p>
+        </main>
       </div>
     );
   }
