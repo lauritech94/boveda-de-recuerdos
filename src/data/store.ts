@@ -1,4 +1,5 @@
-import { CONTENT_VERSION, DEFAULT_MEMORIES, DEFAULT_TEASER_DAYS, EMOTIONS, FINAL_DEFAULT, Memory, TeaserDay } from "./memories";
+import { CONTENT_VERSION, DEFAULT_MEMORIES, FINAL_DEFAULT, Memory } from "./memories";
+import type { EmotionKey } from "./memories";
 
 /** Les claus inclouen la versió del contingut: si canvio un text o un joc al codi i pujo
  *  CONTENT_VERSION, les còpies velles guardades al panell deixen de tenir efecte automàticament.
@@ -48,7 +49,7 @@ export function cleanupOldContentKeys() {
   }
 }
 
-/** Hash curt i ràpid d'un text (només per detectar canvis; no és criptogràfic). */
+/** Hash curt i ràpid d'un text (només per detectar canvis, no és criptogràfic). */
 function hashText(text: string): string {
   let h = 5381;
   for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) | 0;
@@ -165,6 +166,12 @@ function cleanLegacy(o: Partial<Memory> | undefined): Partial<Memory> | undefine
   const c: Partial<Memory> = { ...o };
   // Esfera 1: el text antic del Minion (amb variants) ara és a la targeta d'inici
   if (o.id === 1 && typeof c.hint === "string" && c.hint.includes("Minion molt trapella")) delete c.hint;
+  // Si l'emoció o la segona emoció no existeixen o no són vàlides, es tornen al per defecte del codi.
+  // D'aquesta manera el color de les boles surt correcte encara que el JSON antic tingui coses rares.
+  const EMO_KEYS: EmotionKey[] = ["alegria", "tristesa", "rabia", "fastic", "por"];
+  const localEmocions = ["alegria", "tristeza", "rabia", "asco", "miedo", "fastic", "por", "aligría", "rabíá"];
+  if (typeof c.emotion === "string" && (!EMO_KEYS.includes(c.emotion as EmotionKey) || localEmocions.includes(c.emotion))) delete c.emotion;
+  if (typeof c.emotion2 === "string" && (!EMO_KEYS.includes(c.emotion2 as EmotionKey) || localEmocions.includes(c.emotion2))) delete c.emotion2;
   const legacy = LEGACY[o.id];
   if (!legacy) return c;
   const fields = legacy.fields || {};
@@ -191,31 +198,7 @@ export function applyMemoryOverrides(base: Memory[], over: Partial<Memory>[] = [
   return base.map((m) => {
     const o = { ...(cleanLegacy(over.find((x) => x && x.id === m.id)) || {}) };
     if ((o.config as Record<string, any> | undefined)?.__gameCustom !== "1") delete o.gameKey;
-    // Blindatge: una emoció desconeguda deixaria la pantalla en blanc (EMOTIONS[x] = undefined)
-    if (o.emotion !== undefined && !(o.emotion in EMOTIONS)) delete o.emotion;
-    if (o.emotion2 !== undefined && o.emotion2 && !(o.emotion2 in EMOTIONS)) delete o.emotion2;
-    // Els camps de text han de ser text (si no, es fa servir el del codi)
-    (["title", "when", "hint", "message", "photo", "photoCaption", "gameWhy"] as const).forEach((k) => {
-      if (o[k] !== undefined && typeof o[k] !== "string") delete o[k];
-    });
-    return { ...m, ...o, config: { ...(m.config || {}), ...(o.config && typeof o.config === "object" ? o.config : {}) } };
-  });
-}
-
-/** Les 4 portes sempre completes: cada dia es combina amb el seu valor per defecte.
- *  Així una porta mal desada o incompleta mai pot trencar el calendari ni l'editor. */
-function normalizeTeaserDays(list: unknown): TeaserDay[] {
-  const arr = Array.isArray(list) ? (list as Partial<TeaserDay>[]) : [];
-  return DEFAULT_TEASER_DAYS.map((def) => {
-    const o = arr.find((x) => x && x.dia === def.dia) || {};
-    const clean: Partial<TeaserDay> = {};
-    (Object.keys(def) as (keyof TeaserDay)[]).forEach((k) => {
-      const v = (o as Record<string, unknown>)[k];
-      if (v !== undefined && typeof v === typeof def[k]) (clean as Record<string, unknown>)[k] = v;
-    });
-    if (typeof (o as TeaserDay).foto === "string") clean.foto = (o as TeaserDay).foto;
-    if (typeof (o as TeaserDay).peu === "string") clean.peu = (o as TeaserDay).peu;
-    return { ...def, ...clean, dia: def.dia, sempreOberta: def.sempreOberta, gran: def.gran };
+    return { ...m, ...o, config: { ...(m.config || {}), ...(o.config || {}) } };
   });
 }
 
@@ -223,15 +206,11 @@ function normalizeTeaserDays(list: unknown): TeaserDay[] {
 export function mergeFinal(...parts: Partial<FinalMemory>[]): FinalMemory {
   const merged: FinalMemory = { ...FINAL_DEFAULT };
   parts.forEach((p) => {
-    if (!p || typeof p !== "object") return;
+    if (!p) return;
     const c: Partial<FinalMemory> = { ...p };
     if (typeof c.homeText === "string" && /^Benvinguda!/.test(c.homeText.trim())) delete c.homeText;
-    (["homeText", "title", "message", "photo"] as const).forEach((k) => {
-      if (c[k] !== undefined && typeof c[k] !== "string") delete c[k];
-    });
     Object.assign(merged, c);
   });
-  merged.teaserDays = normalizeTeaserDays(merged.teaserDays);
   return merged;
 }
 
@@ -381,12 +360,15 @@ export async function loadPublished(): Promise<{ memories: Partial<Memory>[]; fi
     publishedSig = sig;
     const v = typeof data.v === "number" ? data.v : 1;
     stalePublished = v < CONTENT_VERSION;
-    // ABANS: si el JSON era d'una versió anterior del codi, es llençaven els textos de la
-    // targeta d'inici, el missatge final i les portes (només es guardava la foto). Ara es
-    // conserva TOT el que vau publicar; els valors antics coneguts ja els neteja
-    // applyMemoryOverrides (cleanLegacy) i mergeFinal, sigui quina sigui la versió.
-    const mems = (data.memories as Partial<Memory>[]).filter((x) => !!x && typeof x.id === "number");
-    const fin = data.final && typeof data.final === "object" ? data.final : {};
+    if (!stalePublished) return { memories: data.memories, final: data.final || {}, v, sig };
+    // JSON d'una versió anterior: conserva els canvis que l'usuari va editar,
+    // però neteja valors antics coneguts. El gameKey continuarà sent decidit per
+    // memories.ts tret que el canvi s'hagi fet explícitament des del desplegable.
+    const mems = (data.memories as Partial<Memory>[])
+      .map((o) => cleanLegacy(o))
+      .filter((x): x is Partial<Memory> => !!x && typeof x.id === "number");
+    const fin: Partial<FinalMemory> = {};
+    if (data.final) fin.photo = data.final.photo;
     return { memories: mems, final: fin, v, sig };
   } catch {
     return null;
@@ -397,9 +379,7 @@ export async function loadPublished(): Promise<{ memories: Partial<Memory>[]; fi
 
 export function loadProgress(): Progress {
   try {
-    const v = JSON.parse(localStorage.getItem(KEY_PROG) || "{}");
-    // Blindatge: si hi hagués un valor estrany (null, text…), Object.keys petaria
-    return v && typeof v === "object" && !Array.isArray(v) ? v : {};
+    return JSON.parse(localStorage.getItem(KEY_PROG) || "{}");
   } catch {
     return {};
   }
