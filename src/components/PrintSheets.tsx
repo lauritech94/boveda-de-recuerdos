@@ -1,5 +1,5 @@
 import { X, Printer } from "lucide-react";
-import { Memory, getEmotion } from "../data/memories";
+import { EMOTIONS, Memory } from "../data/memories";
 import { GAME_DEFS } from "../games/registry";
 import { Sphere } from "./Sphere";
 
@@ -30,14 +30,14 @@ export function PrintSheets({ memories, onClose }: { memories: Memory[]; onClose
             <div className="mt-2 flex gap-3 text-[10px] font-bold text-stone-400"><span>☐ NFC/QR grabado</span><span>☐ Tarjeta impresa</span></div>
           </div>
           {memories.map((m) => {
-            const emo = getEmotion(m.emotion);
+            const emo = EMOTIONS[m.emotion];
             const def = GAME_DEFS[m.gameKey];
             return (
               <div key={m.id} className="break-inside-avoid rounded-2xl border-2 p-3" style={{ borderColor: emo.color }}>
                 <div className="flex items-center gap-3">
                   <Sphere emotion={m.emotion} emotion2={m.emotion2} size={48} />
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: emo.text }}>Esfera #{String(m.id).padStart(2, "0")} · {emo.name}{m.emotion2 ? ` + ${getEmotion(m.emotion2).name}` : ""}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: emo.text }}>Esfera #{String(m.id).padStart(2, "0")} · {emo.name}{m.emotion2 ? ` + ${EMOTIONS[m.emotion2].name}` : ""}</p>
                     <p className="truncate text-base font-black leading-tight">{m.title}</p>
                     <p className="text-[11px] font-bold text-stone-500">{m.when}</p>
                   </div>

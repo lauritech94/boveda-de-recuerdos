@@ -1,4 +1,4 @@
-import { CONTENT_VERSION, DEFAULT_MEMORIES, FINAL_DEFAULT, Memory, normalizeEmotion, normalizeSecondaryEmotion } from "./memories";
+import { CONTENT_VERSION, DEFAULT_MEMORIES, FINAL_DEFAULT, Memory } from "./memories";
 
 /** Les claus inclouen la versió del contingut: si canvio un text o un joc al codi i pujo
  *  CONTENT_VERSION, les còpies velles guardades al panell deixen de tenir efecte automàticament.
@@ -191,12 +191,7 @@ export function applyMemoryOverrides(base: Memory[], over: Partial<Memory>[] = [
   return base.map((m) => {
     const o = { ...(cleanLegacy(over.find((x) => x && x.id === m.id)) || {}) };
     if ((o.config as Record<string, any> | undefined)?.__gameCustom !== "1") delete o.gameKey;
-    const merged = { ...m, ...o, config: { ...(m.config || {}), ...(o.config || {}) } };
-    return {
-      ...merged,
-      emotion: normalizeEmotion(merged.emotion),
-      emotion2: normalizeSecondaryEmotion(merged.emotion2),
-    };
+    return { ...m, ...o, config: { ...(m.config || {}), ...(o.config || {}) } };
   });
 }
 
@@ -365,9 +360,8 @@ export async function loadPublished(): Promise<{ memories: Partial<Memory>[]; fi
     const mems = (data.memories as Partial<Memory>[])
       .map((o) => cleanLegacy(o))
       .filter((x): x is Partial<Memory> => !!x && typeof x.id === "number");
-    // El missatge final també pot ser personal: una versió antiga del JSON no l'ha
-    // d'esborrar només perquè s'ha actualitzat el codi.
-    const fin: Partial<FinalMemory> = data.final && typeof data.final === "object" ? data.final : {};
+    const fin: Partial<FinalMemory> = {};
+    if (data.final) fin.photo = data.final.photo;
     return { memories: mems, final: fin, v, sig };
   } catch {
     return null;

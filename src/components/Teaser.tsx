@@ -151,6 +151,80 @@ function portaOberta(d: Dia, now: number, ovr: Overrides, flags: Flags): boolean
   return now >= obertura(d, flags.senseHores);
 }
 
+/* ---------- TEXTOS EDITABLES (public/calendari.json) ----------
+ * Els textos de dalt són els per defecte. Es poden canviar des del panell de control
+ * (?sorpresa=1&admin=…) i es publiquen pujant public/calendari.json. Només es guarda el que
+ * s'ha canviat. El mòbil de qui juga NOMÉS llegeix el fitxer publicat (mai edicions locals),
+ * així no pot quedar-se amb una còpia vella. */
+const KEY_TEXTOS = "teaser_textos_v1";
+const CAMPS = ["emoji", "titol", "intro", "secret", "cosaEmoji", "cosaNom", "text", "foto", "peu"] as const;
+type Camp = (typeof CAMPS)[number];
+type Textos = Record<number, Partial<Record<Camp, string>>>;
+
+function campBase(d: Dia, c: Camp): string {
+  if (c === "cosaEmoji") return d.cosa.emoji;
+  if (c === "cosaNom") return d.cosa.nom;
+  return (d[c] as string | undefined) ?? "";
+}
+
+function aplicarTextos(base: Dia[], t: Textos): Dia[] {
+  const str = (v: string | undefined, f: string) => (typeof v === "string" ? v : f);
+  return base.map((d) => {
+    const o = t[d.dia];
+    if (!o) return d;
+    return {
+      ...d,
+      emoji: str(o.emoji, d.emoji),
+      titol: str(o.titol, d.titol),
+      intro: str(o.intro, d.intro),
+      secret: str(o.secret, d.secret),
+      text: str(o.text, d.text),
+      foto: typeof o.foto === "string" ? o.foto : d.foto,
+      peu: typeof o.peu === "string" ? o.peu : d.peu,
+      cosa: { emoji: str(o.cosaEmoji, d.cosa.emoji), nom: str(o.cosaNom, d.cosa.nom) },
+    };
+  });
+}
+
+/** Llegeix public/calendari.json. Si no existeix o triga massa, es fan servir els textos per defecte. */
+async function carregarPublicat(): Promise<Textos> {
+  try {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 4000);
+    const url = new URL(`calendari.json?t=${Date.now()}`, window.location.href).toString();
+    const res = await fetch(url, { cache: "no-store", signal: ctl.signal });
+    clearTimeout(timer);
+    if (!res.ok) return {};
+    if (!(res.headers.get("content-type") || "").includes("json")) return {};
+    const data = await res.json();
+    const p = data && typeof data === "object" ? data.portes : null;
+    if (!p || typeof p !== "object") return {};
+    const out: Textos = {};
+    Object.keys(p).forEach((k) => {
+      const n = Number(k);
+      if (!isNaN(n) && p[k] && typeof p[k] === "object") out[n] = p[k];
+    });
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function CampEdicio({ label, valor, onChange, area = false, rows = 3, help }: { label: string; valor: string; onChange: (v: string) => void; area?: boolean; rows?: number; help?: string }) {
+  const cls = "w-full rounded-lg border border-white/15 bg-white/5 px-2.5 py-2 text-xs font-semibold text-white placeholder:text-white/30 outline-none focus:border-amber-300/60";
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/50">{label}</span>
+      {area ? (
+        <textarea rows={rows} value={valor} onChange={(e) => onChange(e.target.value)} className={cls} />
+      ) : (
+        <input value={valor} onChange={(e) => onChange(e.target.value)} className={cls} />
+      )}
+      {help && <span className="mt-0.5 block text-[10px] font-semibold text-white/40">{help}</span>}
+    </label>
+  );
+}
+
 const COLORS = ["#ffd93d", "#4d96ff", "#ff6b6b", "#6bcb77", "#b983ff"];
 
 export function Teaser() {
@@ -165,6 +239,62 @@ export function Teaser() {
 
   const esAdmin = new URLSearchParams(window.location.search).get("admin") === ADMIN_KEY;
   const modeProva = simT !== null || flags.circuit;
+
+  // Textos: publicats (calendari.json) + edicions locals NOMÉS si és admin
+  const [publicat, setPublicat] = useState<Textos>({});
+  const [llest, setLlest] = useState(false);
+  const [locals, setLocals] = useState<Textos>(() => (esAdmin ? llegir<Textos>(KEY_TEXTOS, {}) : {}));
+  const [editant, setEditant] = useState<number | null>(null);
+
+  useEffect(() => {
+    let viu = true;
+    carregarPublicat().then((t) => {
+      if (viu) {
+        setPublicat(t);
+        setLlest(true);
+      }
+    });
+    return () => {
+      viu = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!esAdmin) return;
+    try {
+      localStorage.setItem(KEY_TEXTOS, JSON.stringify(locals));
+    } catch {
+      /* ignorat */
+    }
+  }, [locals, esAdmin]);
+
+  const textos: Textos = {};
+  CALENDARI.forEach((d) => {
+    textos[d.dia] = { ...publicat[d.dia], ...(esAdmin ? locals[d.dia] : {}) };
+  });
+  const CAL = aplicarTextos(CALENDARI, textos);
+  const hiHaEdicionsLocals = esAdmin && Object.values(locals).some((o) => o && Object.keys(o).length > 0);
+
+  const editar = (dia: number, camp: Camp, valor: string) =>
+    setLocals((prev) => ({ ...prev, [dia]: { ...prev[dia], [camp]: valor } }));
+
+  const exportar = () => {
+    const portes: Textos = {};
+    CAL.forEach((d) => {
+      const base = CALENDARI.find((b) => b.dia === d.dia);
+      if (!base) return;
+      const diff: Partial<Record<Camp, string>> = {};
+      CAMPS.forEach((c) => {
+        if (campBase(d, c) !== campBase(base, c)) diff[c] = campBase(d, c);
+      });
+      if (Object.keys(diff).length) portes[d.dia] = diff;
+    });
+    const blob = new Blob([JSON.stringify({ v: 1, exportedAt: Date.now(), portes }, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "calendari.json";
+    a.click();
+  };
 
   useEffect(() => {
     const t = setInterval(() => setTick((n) => n + 1), 1000);
@@ -183,9 +313,9 @@ export function Teaser() {
   }, [rascades, ovr, flags, simT]);
 
   const now = Date.now() + offset;
-  const propera = CALENDARI.find((d) => !portaOberta(d, now, ovr, flags)) || null;
-  const dia = oberta !== null ? CALENDARI.find((d) => d.dia === oberta) || null : null;
-  const totRascat = rascades.length >= CALENDARI.length;
+  const propera = CAL.find((d) => !portaOberta(d, now, ovr, flags)) || null;
+  const dia = oberta !== null ? CAL.find((d) => d.dia === oberta) || null : null;
+  const totRascat = rascades.length >= CAL.length;
 
   const tocar = (d: Dia) => {
     if (!portaOberta(d, now, ovr, flags)) {
@@ -220,11 +350,21 @@ export function Teaser() {
 
   const base = window.location.origin + window.location.pathname;
 
+  // No es pinta res fins que s'ha llegit calendari.json: així no es veu ni un instant el text per defecte
+  if (!llest) {
+    return (
+      <main className="tarjeta flex flex-col items-center py-14 text-center">
+        <div className="animate-floaty"><MinionImg size={100} /></div>
+        <p className="subtitulo mt-4">Un moment…</p>
+      </main>
+    );
+  }
+
   return (
     <main className="tarjeta animate-pop-in">
       <div className="cabecera mb-2 flex items-center justify-between">
         <span className="mundo">El Minion trapella</span>
-        <span className="mundo" style={{ color: "#9a8a70" }}>{rascades.length} / {CALENDARI.length} pistes</span>
+        <span className="mundo" style={{ color: "#9a8a70" }}>{rascades.length} / {CAL.length} pistes</span>
       </div>
 
       {modeProva && (
@@ -242,7 +382,7 @@ export function Teaser() {
           </p>
 
           <div className="mt-3 space-y-2">
-            {CALENDARI.map((d) => {
+            {CAL.map((d) => {
               const oberta_ = portaOberta(d, now, ovr, flags);
               const motiu =
                 ovr[d.dia] === "open" ? "oberta a mà"
@@ -306,10 +446,81 @@ export function Teaser() {
             </button>
           </div>
 
+          {/* ── EDITOR DELS TEXTOS DE LES PORTES ── */}
+          <div className="mt-4 rounded-xl border border-amber-300/30 bg-amber-300/10 p-3">
+            <p className="text-sm font-black text-amber-200">✏️ Editar els textos de les portes</p>
+            <p className="mt-1 text-[11px] font-semibold text-white/60">
+              Els canvis es veuen aquí a l'instant. Perquè també els vegi el mòbil del teu pare, prem «Exportar calendari.json» i puja'l a GitHub a{" "}
+              <code className="text-emerald-300">public/calendari.json</code>.
+            </p>
+
+            <div className="mt-2 space-y-2">
+              {CAL.map((d) => (
+                <div key={d.dia} className="rounded-lg bg-white/5">
+                  <button
+                    onClick={() => setEditant(editant === d.dia ? null : d.dia)}
+                    className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs font-bold"
+                  >
+                    <span>{d.emoji} {etiqueta(d)} · {d.titol}</span>
+                    <span className="text-white/50">{editant === d.dia ? "▲" : "▼"}</span>
+                  </button>
+
+                  {editant === d.dia && (
+                    <div className="space-y-2 border-t border-white/10 p-3">
+                      <div className="grid grid-cols-[72px_1fr] gap-2">
+                        <CampEdicio label="Emoji" valor={d.emoji} onChange={(v) => editar(d.dia, "emoji", v)} />
+                        <CampEdicio label="Títol de la porta" valor={d.titol} onChange={(v) => editar(d.dia, "titol", v)} />
+                      </div>
+                      <CampEdicio label="Text abans de rascar" valor={d.intro} area rows={4} onChange={(v) => editar(d.dia, "intro", v)} />
+                      <CampEdicio
+                        label="Què hi ha SOTA la capa de plata"
+                        valor={d.secret}
+                        area
+                        rows={2}
+                        help="Curt! Cap a 2 línies (admet salts de línia i emojis)."
+                        onChange={(v) => editar(d.dia, "secret", v)}
+                      />
+                      <div className="grid grid-cols-[72px_1fr] gap-2">
+                        <CampEdicio label="Emoji" valor={d.cosa.emoji} onChange={(v) => editar(d.dia, "cosaEmoji", v)} />
+                        <CampEdicio label="«Has trobat…»" valor={d.cosa.nom} onChange={(v) => editar(d.dia, "cosaNom", v)} />
+                      </div>
+                      <CampEdicio label="Missatge després de rascar" valor={d.text} area rows={6} onChange={(v) => editar(d.dia, "text", v)} />
+                      <CampEdicio
+                        label="Foto (opcional)"
+                        valor={d.foto ?? ""}
+                        help="Ruta d'una imatge a public/, per exemple fotos/porta-4.jpg"
+                        onChange={(v) => editar(d.dia, "foto", v)}
+                      />
+                      <CampEdicio label="Peu de foto (opcional)" valor={d.peu ?? ""} onChange={(v) => editar(d.dia, "peu", v)} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              <button onClick={exportar} className="rounded-lg bg-amber-300 px-3 py-2 text-[11px] font-black text-stone-900 hover:bg-amber-200">
+                ⬇ Exportar calendari.json
+              </button>
+              <button
+                onClick={() => { if (confirm("Descartar les edicions fetes en aquest navegador i tornar als textos publicats?")) setLocals({}); }}
+                className="rounded-lg bg-white/10 px-3 py-2 text-[11px] font-bold hover:bg-white/20"
+              >
+                Descartar les meves edicions
+              </button>
+            </div>
+
+            {hiHaEdicionsLocals && (
+              <p className="mt-2 text-[11px] font-bold text-sky-200">
+                ✏️ Tens edicions que només es veuen en aquest navegador. El mòbil del teu pare no les veurà fins que exportis i pugis el fitxer. Quan ja ho hagis publicat, pots prémer «Descartar» per comprovar que es veu la versió publicada.
+              </p>
+            )}
+          </div>
+
           <p className="mt-3 text-[11px] font-black uppercase tracking-wider text-white/50">Provar-ho</p>
           <div className="mt-1 flex flex-wrap gap-1.5">
             <a href={`${base}?sorpresa=1`} className="rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-bold hover:bg-white/20">👀 Com ho veu ella</a>
-            {CALENDARI.map((d) => (
+            {CAL.map((d) => (
               <a key={d.dia} href={`${base}?sorpresa=1&ara=${ANY}-11-0${d.dia}T09:00`} className="rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-bold hover:bg-white/20">
                 {d.dia} nov
               </a>
@@ -341,7 +552,7 @@ export function Teaser() {
           )}
 
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {CALENDARI.map((d) => {
+            {CAL.map((d) => {
               const oberta_ = portaOberta(d, now, ovr, flags);
               const feta = rascades.includes(d.dia);
               return (

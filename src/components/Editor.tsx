@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { X, Download, Upload, ImagePlus, ChevronDown, ChevronUp, Printer, Trash2, Link2, Save, RotateCcw, Unlock, ExternalLink } from "lucide-react";
-import { CONTENT_VERSION, EMOTIONS, EmotionKey, FINAL_DEFAULT, Memory, MemoryKind } from "../data/memories";
+import { EMOTIONS, EmotionKey, FINAL_DEFAULT, Memory, MemoryKind } from "../data/memories";
 import { GAME_DEFS, GAME_KEYS } from "../games/registry";
 import { Sphere } from "./Sphere";
 import { exportAll, fileToDataUrl, importAll, loadPublished, onSaveStatus, publishedIsStale, flushLocal, hasLocalOverrides, getLocalBaseSig, clearLocalOverrides, Progress } from "../data/store";
@@ -178,7 +178,6 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
   // Fotos publicades a public/recuerdos.json (per detectar les que només existeixen en aquest navegador)
   const [pubPhotos, setPubPhotos] = useState<Record<number, string> | null>(null);
   const [pubFinalPhoto, setPubFinalPhoto] = useState<string | null>(null);
-  const [pubVersion, setPubVersion] = useState<number | null | undefined>(undefined);
   const [stale, setStale] = useState(false);
   // Avís de desat: mai bloqueja, només informa (abans sortia un alert en cada lletra)
   const [saveWarn, setSaveWarn] = useState(false);
@@ -190,7 +189,6 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
       (pub?.memories || []).forEach((x) => { if (x && typeof x.id === "number") map[x.id] = x.photo || ""; });
       setPubPhotos(map);
       setPubFinalPhoto(pub?.final?.photo || "");
-      setPubVersion(pub ? (pub.v ?? 1) : null);
       setStale(publishedIsStale());
       setLocalPending(!!pub && hasLocalOverrides() && getLocalBaseSig() === pub.sig);
     });
@@ -213,17 +211,6 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
           <div>
             <h2 className="text-lg font-black">Panel de edición · 30 esferas</h2>
             <p className="text-xs font-semibold text-white/50">Solo lo ves tú (URL con <code>?editar=1</code>). Los cambios se guardan en este navegador.</p>
-            <p className="text-[11px] font-semibold text-amber-200/80">
-              Web v{CONTENT_VERSION} · JSON publicat: {pubVersion === undefined ? "carregant…" : pubVersion === null ? "no disponible" : `v${pubVersion}`}
-            </p>
-            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1" aria-label="Paleta d'emocions">
-              {(Object.keys(EMOTIONS) as EmotionKey[]).map((key) => (
-                <span key={key} className="inline-flex items-center gap-1 text-[11px] font-semibold text-white/75">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: EMOTIONS[key].color }} />
-                  {EMOTIONS[key].name}: {EMOTIONS[key].colorName}
-                </span>
-              ))}
-            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <button onClick={onPrint} className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-black hover:bg-white/20"><Printer className="h-4 w-4" /> Imprimir fichas</button>
