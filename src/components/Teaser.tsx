@@ -69,7 +69,7 @@ export const CALENDARI: Dia[] = [
     intro: "Avui ha deixat caure una cosa amb molta pressa.\n\nSembla que té un pla per a demà… Rasca!",
     secret: "Demà\nens veiem ✨",
     cosa: { emoji: "⏰", nom: "Un rellotge" },
-    text: "El Minion està nerviós: demà és el seu gran dia… o el teu.\n\nDescansa bé aquesta nit i deixa el mòbil carregat.\n\nDemà ho entendràs tot. 💛",
+    text: "El Minion està nerviós: demà és el seu gran dia… o el teu.\n\nDescansa bé aquesta nit, que demà et tocarà córrer.\n\nDemà ho entendràs tot. 💛",
   },
   {
     dia: 7,
@@ -218,11 +218,6 @@ export function Teaser() {
     }, 1900);
   };
 
-  const anarAlJoc = () => {
-    playSound("unlock");
-    window.location.href = window.location.pathname;
-  };
-
   const base = window.location.origin + window.location.pathname;
 
   return (
@@ -367,30 +362,6 @@ export function Teaser() {
             })}
           </div>
 
-          {/* El sac del Minion: sempre les 4 caselles, s'omplen a mesura que rasca */}
-          <div className="mt-5 rounded-2xl bg-amber-50 p-3 ring-1 ring-amber-200">
-            <p className="text-left text-[11px] font-semibold uppercase tracking-widest text-amber-800">
-              🎒 El sac del Minion · {rascades.length}/{CALENDARI.length}
-            </p>
-            <div className="mt-2 grid grid-cols-4 gap-2">
-              {CALENDARI.map((d) => {
-                const ok = rascades.includes(d.dia);
-                return (
-                  <div
-                    key={d.dia}
-                    className={`flex aspect-square flex-col items-center justify-center rounded-xl px-1 text-center ${
-                      ok ? "animate-pop-in bg-white ring-2 ring-amber-300" : "bg-stone-100 ring-1 ring-stone-200"
-                    }`}
-                  >
-                    <span className="text-2xl leading-none">{ok ? d.cosa.emoji : "❔"}</span>
-                    <span className="mt-1 text-[8px] font-semibold leading-tight text-stone-600">{ok ? d.cosa.nom : "?"}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {totRascat && <button onClick={anarAlJoc} className="boto">🔮 Començar l'aventura</button>}
         </>
       )}
 
@@ -423,7 +394,7 @@ export function Teaser() {
               </div>
 
               <div className="mx-auto mb-3 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-stone-700 shadow-sm ring-1 ring-amber-200">
-                <span className="text-2xl">{dia.cosa.emoji}</span> Al sac: {dia.cosa.nom}
+                <span className="text-2xl">{dia.cosa.emoji}</span> Has trobat: {dia.cosa.nom}
               </div>
 
               {dia.foto && (
@@ -434,8 +405,6 @@ export function Teaser() {
               )}
 
               <section className="pista">{dia.text}</section>
-
-              {dia.gran && <button onClick={anarAlJoc} className="boto">🔮 Començar l'aventura</button>}
             </div>
           )}
         </>
