@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { X, Download, Upload, ImagePlus, ChevronDown, ChevronUp, Printer, Trash2, Link2, Save, RotateCcw, Unlock, ExternalLink } from "lucide-react";
-import { EMOTIONS, EmotionKey, FINAL_DEFAULT, Memory, MemoryKind } from "../data/memories";
+import { EMOTIONS, EmotionKey, FINAL_DEFAULT, Memory, MemoryKind, DEFAULT_TEASER_DAYS, TeaserDay } from "../data/memories";
 import { GAME_DEFS, GAME_KEYS } from "../games/registry";
 import { Sphere } from "./Sphere";
 import { exportAll, fileToDataUrl, importAll, loadPublished, onSaveStatus, publishedIsStale, flushLocal, hasLocalOverrides, getLocalBaseSig, clearLocalOverrides, Progress } from "../data/store";
@@ -172,7 +172,15 @@ function ImageCheck({ path, label }: { path: string; label: string }) {
 export function Editor({ memories, final, progress, onChange, onChangeFinal, onResetProgress, onUnlockAll, onClose, onPrint }: Props) {
   const [open, setOpen] = useState<number | null>(null);
   const [showFinal, setShowFinal] = useState(false);
+  const [showTeaser, setShowTeaser] = useState(false);
+  const [teaserOpen, setTeaserOpen] = useState<number | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
+
+  const teaserDays: TeaserDay[] = final.teaserDays || DEFAULT_TEASER_DAYS;
+  const updateTeaserDay = (diaNum: number, patch: Partial<TeaserDay>) => {
+    const list = teaserDays.map((d) => (d.dia === diaNum ? { ...d, ...patch } : d));
+    onChangeFinal({ ...final, teaserDays: list });
+  };
   const unlockedCount = Object.keys(progress).length;
 
   // Fotos publicades a public/recuerdos.json (per detectar les que només existeixen en aquest navegador)
@@ -341,6 +349,104 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
                   <div><label className={labelCls}>Mensaje (catalán)</label><textarea rows={7} value={final.message} onChange={(e) => onChangeFinal({ ...final, message: e.target.value })} className={inputCls} /></div>
                 </div>
                 <PhotoField value={final.photo} onChange={(v) => onChangeFinal({ ...final, photo: v })} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 🗓️ SECCIÓN DE EDICIÓN DE LAS 4 PUERTAS DEL CALENDARIO (?sorpresa=1) */}
+        <div className="mb-4 overflow-hidden rounded-2xl border border-yellow-300/40 bg-gradient-to-br from-yellow-300/10 to-orange-500/10">
+          <button onClick={() => setShowTeaser(!showTeaser)} className="flex w-full items-center justify-between px-4 py-3 text-left">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🗓️</span>
+              <div>
+                <p className="font-black text-amber-200">🗓️ Las 4 puertas del calendario de anticipación (4, 5, 6 y 7 nov)</p>
+                <p className="text-xs font-semibold text-white/60">Enlace de la tarjeta NFC de cumpleaños: <code>?sorpresa=1</code>. Aquí puedes editar los textos, lo que se rasca y las fotos de cada día.</p>
+              </div>
+            </div>
+            {showTeaser ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+          </button>
+          {showTeaser && (
+            <div className="space-y-3 border-t border-white/10 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/5 p-3">
+                <div>
+                  <p className="text-xs font-bold text-white">🔗 Enlace para la tarjeta NFC del 4 de noviembre:</p>
+                  <code className="text-xs font-bold text-emerald-300">{`${window.location.origin}${window.location.pathname}?sorpresa=1`}</code>
+                </div>
+                <a
+                  href={`${window.location.origin}${window.location.pathname}?sorpresa=1&admin=minion2026`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 rounded-lg bg-amber-300 px-3 py-1.5 text-xs font-black text-stone-900 hover:bg-amber-200"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" /> Abrir panel de control de pruebas
+                </a>
+              </div>
+
+              <div className="space-y-2">
+                {teaserDays.map((d) => {
+                  const isDayOpen = teaserOpen === d.dia;
+                  return (
+                    <div key={d.dia} className={`overflow-hidden rounded-xl border ${isDayOpen ? "border-amber-300/50 bg-white/[0.07]" : "border-white/10 bg-white/[0.03]"}`}>
+                      <button
+                        onClick={() => setTeaserOpen(isDayOpen ? null : d.dia)}
+                        className="flex w-full items-center justify-between px-3 py-2.5 text-left"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-lg">{d.emoji}</span>
+                          <div>
+                            <p className="text-sm font-black text-white">Puerta {d.dia} de noviembre · {d.titol}</p>
+                            <p className="text-xs text-white/50 line-clamp-1">{d.secret.replace(/\n/g, " ")}</p>
+                          </div>
+                        </div>
+                        {isDayOpen ? <ChevronUp className="h-4 w-4 text-white/60" /> : <ChevronDown className="h-4 w-4 text-white/60" />}
+                      </button>
+
+                      {isDayOpen && (
+                        <div className="border-t border-white/10 p-3">
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <div className="space-y-2.5">
+                              <div>
+                                <label className={labelCls}>Título del día (en catalán)</label>
+                                <input value={d.titol} onChange={(e) => updateTeaserDay(d.dia, { titol: e.target.value })} className={inputCls} />
+                              </div>
+                              <div>
+                                <label className={labelCls}>Texto ANTES de rascar (introducción)</label>
+                                <textarea rows={3} value={d.intro} onChange={(e) => updateTeaserDay(d.dia, { intro: e.target.value })} className={inputCls} />
+                              </div>
+                              <div>
+                                <label className={labelCls}>Texto OCULTO bajo la capa de plata (lo que descubre al rascar)</label>
+                                <textarea rows={2} value={d.secret} onChange={(e) => updateTeaserDay(d.dia, { secret: e.target.value })} className={inputCls} placeholder="DISSABTE&#10;7 de novembre" />
+                              </div>
+                              <div>
+                                <label className={labelCls}>Mensaje que aparece TRAS rascar</label>
+                                <textarea rows={4} value={d.text} onChange={(e) => updateTeaserDay(d.dia, { text: e.target.value })} className={inputCls} />
+                              </div>
+                            </div>
+
+                            <div className="space-y-2.5">
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className={labelCls}>Emoji del objeto</label>
+                                  <input value={d.cosaEmoji} onChange={(e) => updateTeaserDay(d.dia, { cosaEmoji: e.target.value })} className={inputCls} placeholder="🍌" />
+                                </div>
+                                <div>
+                                  <label className={labelCls}>Nombre del objeto</label>
+                                  <input value={d.cosaNom} onChange={(e) => updateTeaserDay(d.dia, { cosaNom: e.target.value })} className={inputCls} placeholder="El plàtan del Minion" />
+                                </div>
+                              </div>
+                              <PhotoField value={d.foto || ""} onChange={(v) => updateTeaserDay(d.dia, { foto: v })} label="Fotografía opcional del día" />
+                              <div>
+                                <label className={labelCls}>Pie de foto (opcional)</label>
+                                <input value={d.peu || ""} onChange={(e) => updateTeaserDay(d.dia, { peu: e.target.value })} className={inputCls} placeholder="Recuerdo del..." />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

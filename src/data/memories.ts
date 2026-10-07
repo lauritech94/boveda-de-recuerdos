@@ -27,14 +27,68 @@ export type Memory = {
 
 export const APP_NAME = "La Càmera dels Records";
 
-/** 🔄 VERSIÓ DEL CONTINGUT (títols, pistes, textos per defecte, jocs, i interfície).
- *  Aquesta és la "clau mestra": cada cop que es fa qualsevol canvi, es puja aquest número.
- *  A TOTS els navegadors, les còpies locals guardades amb una versió anterior deixen de
- *  tenir efecte i es netegen soles. D'aquesta manera, després de cada canvi, tot surt net
- *  i sense errors, sense que l'usuari hagi de fer res.
- *  (El progrés de les 30 esferes i l'estat del calendari NO depenen d'aquesta versió: es
- *  conserven, perquè el recorregut de qui està jugant no s'ha de perdre per una correcció.) */
 export const CONTENT_VERSION = 12;
+
+export type TeaserDay = {
+  dia: number;
+  emoji: string;
+  titol: string;
+  intro: string;
+  secret: string;
+  cosaEmoji: string;
+  cosaNom: string;
+  text: string;
+  foto?: string;
+  peu?: string;
+  sempreOberta?: boolean;
+  gran?: boolean;
+};
+
+export const DEFAULT_TEASER_DAYS: TeaserDay[] = [
+  {
+    dia: 4,
+    emoji: "🎂",
+    titol: "Per molts anys!",
+    intro:
+      "Avui és el teu dia… i el Minion no s'ha pogut aguantar.\n\nT'ha deixat una carta, però li ha tapat el més important amb una capa de plata. Rasca-la!",
+    secret: "DISSABTE\n7 de novembre 🔮",
+    cosaEmoji: "🍌",
+    cosaNom: "El plàtan del Minion",
+    text: "Aquest dissabte t'espera una aventura molt especial.\n\nUn Minion molt trapella té alguna cosa teva… i necessitarem la teva ajuda per recuperar-la.\n\nA partir d'avui, cada dia a les 08:00 s'obrirà una porta nova. Només has de tornar a obrir aquesta mateixa targeta. 💛",
+    sempreOberta: true,
+  },
+  {
+    dia: 5,
+    emoji: "🍌",
+    titol: "Ha passat per aquí",
+    intro: "Algú ha estat rondant per casa aquesta nit.\n\nHa deixat una cosa a terra, però està tot tapat. Rasca per veure què és!",
+    secret: "Una pell\nde plàtan 🍌",
+    cosaEmoji: "👣",
+    cosaNom: "Unes petjades",
+    text: "El Minion ha tornat a passar per aquí.\n\nNo sabem què busca ni on s'amaga, però cada nit deixa alguna cosa enrere.\n\nDemà hi tornarà. 👀",
+  },
+  {
+    dia: 6,
+    emoji: "🔔",
+    titol: "Està nerviós",
+    intro: "Avui ha deixat caure una cosa amb molta pressa.\n\nSembla que té un pla per a demà… Rasca!",
+    secret: "Demà\nens veiem ✨",
+    cosaEmoji: "⏰",
+    cosaNom: "Un rellotge",
+    text: "El Minion està nerviós: demà és el seu gran dia… o el teu.\n\nDescansa bé aquesta nit, que demà et tocarà córrer.\n\nDemà ho entendràs tot. 💛",
+  },
+  {
+    dia: 7,
+    emoji: "🔮",
+    titol: "Avui és el dia",
+    intro: "Ha arribat el moment.\n\nLa darrera porta té el segell més gruixut de tots. Rasca fort!",
+    secret: "A casa\ndels papes 🏠",
+    cosaEmoji: "🎉",
+    cosaNom: "La sorpresa",
+    text: "Avui, a les 17:00, a casa dels papes.\n\nVine amb ganes de jugar i de passar-t'ho bé: t'hi esperem tots. 💛\n\n(I el Minion també. Ell diu que no, però sí.)",
+    gran: true,
+  },
+];
 
 /** Targeta d'inici (l'enllaç principal, sense ?bola=). No és cap esfera. Editable des del panell. */
 export const HOME_TEXT_DEFAULT = `Aquesta nit, un Minion molt trapella ha volgut robar-te els teus records.
@@ -59,6 +113,7 @@ export const FINAL_DEFAULT = {
   message:
     "El Minion ja no pot fer-hi res: les 30 esferes tornen a brillar. Però el record més important no cap en cap esfera: ets tu, i tot el que encara ens queda per viure juntes. T'estimo.",
   photo: "",
+  teaserDays: DEFAULT_TEASER_DAYS,
 };
 
 /** Text de l'esfera 1 (abans del botó per revelar el record). */

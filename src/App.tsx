@@ -13,7 +13,7 @@ import { PrintSheets } from "./components/PrintSheets";
 import { MinionImg } from "./components/MinionImg";
 import { Teaser } from "./components/Teaser";
 import { useSound, playSound } from "./components/useSound";
-import { Volume2, VolumeX, Sparkles } from "lucide-react";
+import { Volume2, VolumeX } from "lucide-react";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -36,17 +36,27 @@ export default function App() {
   const [memories, setMemories] = useState<Memory[]>(() => loadMemories());
   const [final, setFinal] = useState<typeof FINAL_DEFAULT>(() => loadFinal());
   const [progress, setProgress] = useState<Progress>(() => loadProgress());
-  const [activeId, setActiveId] = useState<number | null>(null);
-  const [editing, setEditing] = useState(false);
+
+  // Inicialització sincrònica: sap quina bola o mode obrir des del primer mil·lisegon
+  const [activeId, setActiveId] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    const b = parseInt(new URLSearchParams(window.location.search).get("bola") || "");
+    return b >= 1 && b <= 30 ? b : null;
+  });
+  const [editing, setEditing] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).get("editar") === "1";
+  });
+
   const [printing, setPrinting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [showProgress, setShowProgress] = useState(false);
   const [minionComment, setMinionComment] = useState<string | null>(null);
-  // No es pinta res fins que les dades publicades estiguin carregades:
-  // així no es veu ni un instant el text per defecte abans del vostre.
-  const [ready, setReady] = useState(false);
+
   // Avançament del dia de l'aniversari (?sorpresa=1): pàgina independent del joc
-  const [teaserMode] = useState(() => new URLSearchParams(window.location.search).get("sorpresa") === "1");
+  const [teaserMode] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).get("sorpresa") === "1";
+  });
 
   const { on: soundActive, toggle: toggleSound } = useSound();
 
@@ -58,9 +68,7 @@ export default function App() {
   const updateMemories = (list: Memory[]) => { setMemories(list); saveMemories(list); };
   const updateFinal = (f: typeof FINAL_DEFAULT) => { setFinal(f); saveFinal(f); };
 
-  // Frases del Minion cada 5 esferes. Es compara amb el recompte anterior (no amb "===")
-  // perquè funcioni encara que es passi d'esfera en esfera sense tornar mai a l'inici,
-  // i es mostra com a avís flotant visible des de QUALSEVOL pantalla.
+  // Frases del Minion cada 5 esferes
   const MILESTONES: { n: number; msg: string }[] = [
     { n: 5, msg: "🍌 Bello! Ja en portes 5? No m'ho crec!" },
     { n: 10, msg: "🍌 Bello! Ja en portes 10!" },
@@ -85,6 +93,7 @@ export default function App() {
     prevCountRef.current = unlockedCount;
   }, [unlockedCount]);
 
+  // Gestió de reset
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     if (p.get("reset") === "1") {
@@ -93,52 +102,16 @@ export default function App() {
       window.history.replaceState({}, "", window.location.pathname);
       setToast("🔄 Progrés reiniciat. Totes les esferes tornen a estar encriptades.");
       setTimeout(() => setToast(null), 4000);
-      return;
     }
-    const b = parseInt(p.get("bola") || "");
-    if (b >= 1 && b <= 30) setActiveId(b);
-    if (p.get("editar") === "1") setEditing(true);
   }, []);
 
-  // 🔄 AUTO-ACTUALITZACIÓ: els mòbils guarden l'index.html en memòria cau i poden quedar-se
-  // amb una versió antiga encara que pugem canvis. Aquí es demana al servidor la versió
-  // fresca (amb ?check= per saltar-se la cau), se'n calcula una empremta i, si és diferent
-  // de la que es va veure per última vegada, es recarrega la pàgina amb una URL única
-  // perquè el navegador es baixi el codi nou. Només fa UNA recàrrega quan hi ha versió nova.
+  // Càrrega suau de les dades publicades
   useEffect(() => {
-    const KEY_SIG = "app_html_sig";
-    fetch(`${window.location.pathname}?check=${Date.now()}`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.text() : null))
-      .then((html) => {
-        if (!html) return;
-        let h = 5381;
-        for (let i = 0; i < html.length; i++) h = ((h << 5) + h + html.charCodeAt(i)) | 0;
-        const sig = `${html.length}-${(h >>> 0).toString(36)}`;
-        let old: string | null = null;
-        try {
-          old = localStorage.getItem(KEY_SIG);
-          localStorage.setItem(KEY_SIG, sig);
-        } catch { /* sense localStorage no es pot comparar */ }
-        if (old && old !== sig) {
-          // Hi ha una versió nova publicada: recàrrega amb URL única (esquiva la cau)
-          const url = new URL(window.location.href);
-          url.searchParams.set("actualitzacio", sig.slice(-6));
-          window.location.replace(url.toString());
-        }
-      })
-      .catch(() => { /* sense connexió: es continua amb la versió actual */ });
-  }, []);
-
-  useEffect(() => {
-    // Neteja de dades locals antigues de versions anteriors (fosa per a cada canvi de codi)
     cleanupOldContentKeys();
     loadPublished()
       .then((pub) => {
         if (!pub) return;
         const base = applyMemoryOverrides(DEFAULT_MEMORIES, pub.memories);
-        // Si el recuerdos.json publicat NO és el que servia de base als canvis locals
-        // (algú n'ha publicat un de nou, o la còpia local és d'abans d'aquest sistema),
-        // la còpia local és obsoleta: s'esborra i es mostra el publicat.
         const localIsStale = hasLocalOverrides() && getLocalBaseSig() !== pub.sig;
         if (localIsStale) {
           clearLocalOverrides();
@@ -149,8 +122,7 @@ export default function App() {
           setFinal(mergeFinal(pub.final, loadLocalFinalOverride()));
         }
       })
-      .catch(() => { /* sense recuerdos.json es fa servir el codi */ })
-      .then(() => setReady(true));
+      .catch(() => { /* es mantenen les memòries per defecte */ });
   }, []);
 
   useEffect(() => {
@@ -169,10 +141,10 @@ export default function App() {
 
   const goHome = () => {
     setActiveId(null);
-    setShowProgress(true);
     window.history.replaceState({}, "", window.location.pathname);
     window.scrollTo({ top: 0 });
   };
+
   const openSphere = (id: number) => {
     playSound("tap");
     setActiveId(id);
@@ -192,8 +164,7 @@ export default function App() {
     return r;
   }, [memories, progress]);
 
-  // Avís flotant del Minion: visible des de QUALSEVOL pantalla (inici o dins d'una esfera),
-  // perquè si es van escanejant boles seguides mai es torna a l'inici.
+  // Avís flotant del Minion
   const minionOverlay = minionComment && (
     <div className="minion-toast" onClick={() => setMinionComment(null)}>
       <MinionImg size={56} anim="minion-salt" />
@@ -201,7 +172,7 @@ export default function App() {
     </div>
   );
 
-  /* ---------- AVANÇAMENT DE L'ANIVERSARI (no toca el progrés del joc) ---------- */
+  /* ---------- AVANÇAMENT DE L'ANIVERSARI (?sorpresa=1) ---------- */
   if (teaserMode) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
@@ -211,28 +182,7 @@ export default function App() {
     );
   }
 
-  /* ---------- CÀRREGA: evita el parpelleig del text per defecte ----------
-   * L'esfera es mostra NEUTRA (bloquejada, en gris): el color de l'emoció encara
-   * pot canviar quan arribi el recuerdos.json, i si l'ensenyàvem ja de color es
-   * veia primer un color i després el bo. El gris mai és "incorrecte". */
-  if (!ready && !editing) {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <Fons />
-        <main className="tarjeta flex flex-col items-center py-14 text-center">
-          {active ? (
-            <Sphere emotion="alegria" size={110} locked pulse />
-          ) : (
-            <div className="animate-floaty"><MinionImg size={110} /></div>
-          )}
-          <h1 className="titol mt-5">{active ? `Esfera ${pad(active.id)}` : APP_NAME}</h1>
-          <p className="subtitulo">Obrint la càmera dels records…</p>
-        </main>
-      </div>
-    );
-  }
-
-  /* ---------- PÀGINA D'UNA ESFERA ---------- */
+  /* ---------- PÀGINA D'UNA ESFERA CONCRETA (?bola=1...30) ---------- */
   if (active && !editing) {
     const others = Object.keys(progress).filter((k) => Number(k) !== active.id).length;
     return (
@@ -252,7 +202,7 @@ export default function App() {
     );
   }
 
-  /* ---------- PÀGINA D'INICI (ESTANTERIA DE MEMÒRIA + MINION) ---------- */
+  /* ---------- PÀGINA D'INICI: LA BÓVEDA AMB LES 30 ESFERES SEMPRE VISIBLES ---------- */
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <Fons />
@@ -308,88 +258,78 @@ export default function App() {
           {allDone ? "💛 Gràcies per recuperar-los tots." : "🔍 Busca la primera esfera per a començar l'aventura."}
         </div>
 
-        {/* ESTANTERIA DE MEMÒRIA (esferes rodant a lloc) */}
+        {/* ESTANTERIA DE MEMÒRIA AMB LES 30 ESFERES (SEMPRE VISIBLES) */}
         <div className="mt-6 border-t border-amber-900/10 pt-4">
-          <button
-            onClick={() => setShowProgress((v) => !v)}
-            className="boto secundari flex items-center justify-center gap-2"
-            style={{ marginTop: 0 }}
-          >
-            <Sparkles size={16} />
-            <span>
-              {showProgress ? "Amagar estanteria ▲" : `Estanteria de memòria (${unlockedCount}/30) ▼`}
-            </span>
-          </button>
+          <div className="flex items-center justify-between mb-2 px-1">
+            <span className="text-xs font-bold text-stone-600 uppercase tracking-wider">Estanteria de memòria</span>
+            <span className="text-xs font-bold text-amber-700">{unlockedCount} / 30</span>
+          </div>
 
-          {showProgress && (
-            <div className="animate-pop-in mt-4">
-              {/* Barra de progrés per emocions */}
-              <div className="barra-progres">
-                <span style={{ width: `${(unlockedCount / 30) * 100}%` }} />
-              </div>
+          {/* Barra de progrés per emocions */}
+          <div className="barra-progres">
+            <span style={{ width: `${(unlockedCount / 30) * 100}%` }} />
+          </div>
 
-              {/* Llegenda d'emocions */}
-              <div className="mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1">
-                {(Object.keys(EMOTIONS) as EmotionKey[]).map((k) => (
-                  <span key={k} className="inline-flex items-center gap-1 text-[11px] font-bold text-stone-600">
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: EMOTIONS[k].color }} />
-                    {EMOTIONS[k].name} {byEmotion[k]}
+          {/* Llegenda d'emocions */}
+          <div className="mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1">
+            {(Object.keys(EMOTIONS) as EmotionKey[]).map((k) => (
+              <span key={k} className="inline-flex items-center gap-1 text-[11px] font-bold text-stone-600">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: EMOTIONS[k].color }} />
+                {EMOTIONS[k].name} {byEmotion[k]}
+              </span>
+            ))}
+          </div>
+
+          {/* Les 30 esferes a la prestatgeria (sempre visibles) */}
+          <div className="mt-4 grid grid-cols-5 gap-2 sm:grid-cols-6">
+            {memories.map((m) => {
+              const done = !!progress[m.id];
+              const special = m.kind !== "game";
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => {
+                    if (done) openSphere(m.id);
+                    else {
+                      playSound("fail");
+                      setToast(`🔒 Esfera ${pad(m.id)} encriptada. Acosta el mòbil a la bola física per desxifrar-la.`);
+                      setTimeout(() => setToast(null), 2800);
+                    }
+                  }}
+                  className={`flex flex-col items-center gap-1 rounded-xl p-1 transition-all active:scale-95 ${
+                    done ? "esfera-roda" : ""
+                  }`}
+                  title={done ? m.title : "Encriptada"}
+                >
+                  <Sphere
+                    emotion={m.emotion}
+                    emotion2={m.emotion2}
+                    size={56}
+                    locked={!done}
+                    photo={done ? m.photo : undefined}
+                    number={m.id}
+                  />
+                  <span className={`text-[10px] font-bold leading-tight ${done ? "text-stone-800" : "text-stone-400"}`}>
+                    {done
+                      ? special
+                        ? m.kind === "intro"
+                          ? "Inici"
+                          : m.kind === "gift"
+                          ? "🎁"
+                          : "🎬"
+                        : "✓"
+                      : special && m.kind !== "intro"
+                      ? "★"
+                      : "?"}
                   </span>
-                ))}
-              </div>
+                </button>
+              );
+            })}
+          </div>
 
-              {/* Les 30 esferes a la prestatgeria (amb animació de rodar a lloc) */}
-              <div className="mt-4 grid grid-cols-5 gap-2 sm:grid-cols-6">
-                {memories.map((m) => {
-                  const done = !!progress[m.id];
-                  const special = m.kind !== "game";
-                  return (
-                    <button
-                      key={m.id}
-                      onClick={() => {
-                        if (done) openSphere(m.id);
-                        else {
-                          playSound("fail");
-                          setToast(`🔒 Esfera ${pad(m.id)} encriptada. Acosta el mòbil a la bola física per desxifrar-la.`);
-                          setTimeout(() => setToast(null), 2800);
-                        }
-                      }}
-                      className={`flex flex-col items-center gap-1 rounded-xl p-1 transition-all active:scale-95 ${
-                        done ? "esfera-roda" : ""
-                      }`}
-                      title={done ? m.title : "Encriptada"}
-                    >
-                      <Sphere
-                        emotion={m.emotion}
-                        emotion2={m.emotion2}
-                        size={56}
-                        locked={!done}
-                        photo={done ? m.photo : undefined}
-                        number={m.id}
-                      />
-                      <span className={`text-[10px] font-bold leading-tight ${done ? "text-stone-800" : "text-stone-400"}`}>
-                        {done
-                          ? special
-                            ? m.kind === "intro"
-                              ? "Inici"
-                              : m.kind === "gift"
-                              ? "🎁"
-                              : "🎬"
-                            : "✓"
-                          : special && m.kind !== "intro"
-                          ? "★"
-                          : "?"}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <p className="mt-3 text-[11px] font-semibold text-stone-500">
-                Les esferes grises encara estan encriptades. Les ★ són especials.
-              </p>
-            </div>
-          )}
+          <p className="mt-3 text-[11px] font-semibold text-stone-500">
+            Les esferes grises encara estan encriptades. Les ★ són especials.
+          </p>
         </div>
       </main>
 

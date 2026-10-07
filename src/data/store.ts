@@ -400,7 +400,7 @@ function pickDiff<T extends object>(base: T, cur: T, keys: (keyof T)[]): Partial
 }
 
 const MEM_KEYS: (keyof Memory)[] = ["kind", "title", "emotion", "emotion2", "when", "hint", "gameKey", "gameWhy", "message", "photo", "photoCaption", "config"];
-const FINAL_KEYS = ["homeText", "title", "message", "photo"] as const;
+const FINAL_KEYS = ["homeText", "title", "message", "photo", "teaserDays"] as const;
 
 /** Exporta NOMÉS el que s'ha editat al panell. Així el recuerdos.json no tapa mai
  *  els valors que venen de memories.ts (emojis, jocs per defecte…). */
