@@ -4,7 +4,7 @@ import { APP_NAME, DEFAULT_MEMORIES, EMOTIONS, EmotionKey, FINAL_DEFAULT, Memory
 import {
   loadMemories, saveMemories, loadFinal, saveFinal, loadProgress, saveProgress, resetProgress,
   loadPublished, applyMemoryOverrides, loadLocalMemoryOverrides, loadLocalFinalOverride, mergeFinal,
-  getLocalBaseSig, hasLocalOverrides, clearLocalOverrides, Progress,
+  getLocalBaseSig, hasLocalOverrides, clearLocalOverrides, cleanupOldContentKeys, Progress,
 } from "./data/store";
 import { Sphere } from "./components/Sphere";
 import { MemoryExperience } from "./components/MemoryExperience";
@@ -101,6 +101,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    // Neteja de dades locals antigues de versions anteriors (fosa per a cada canvi de codi)
+    cleanupOldContentKeys();
     loadPublished()
       .then((pub) => {
         if (!pub) return;

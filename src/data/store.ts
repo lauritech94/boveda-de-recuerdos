@@ -18,6 +18,36 @@ const KEY_BASE_SIG = `esferas_base_sig_v${CONTENT_VERSION}`;
 /** Empremta del recuerdos.json carregat ara mateix. */
 let publishedSig = "";
 
+/** Prefixos de les claus de contingut editat (les que depenen de la versió).
+ *  NO hi són el progrés (`esferas_progreso_`) ni el calendari (`teaser_`): aquests
+ *  s'han de conservar entre versions. */
+const CONTENT_KEY_PREFIXES = [
+  "esferas_txt_",
+  "esferas_foto_",
+  "esferas_final_txt_",
+  "esferas_final_foto_",
+  "esferas_base_sig_",
+];
+
+/** Neteja automàtica: elimina les dades locals de versions anteriors del contingut.
+ *  Es fa en cada càrrega, a TOTS els navegadors, perquè no quedi cap residu antic
+ *  que pugui desentonar o fer error. No toca el progrés ni el calendari. */
+export function cleanupOldContentKeys() {
+  try {
+    const obsoletes: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k) continue;
+      const esContingut = CONTENT_KEY_PREFIXES.some((p) => k.startsWith(p));
+      const esActual = k.endsWith(`v${CONTENT_VERSION}`);
+      if (esContingut && !esActual) obsoletes.push(k);
+    }
+    obsoletes.forEach((k) => localStorage.removeItem(k));
+  } catch {
+    /* sense accés a localStorage: no hi ha res a netejar */
+  }
+}
+
 /** Hash curt i ràpid d'un text (només per detectar canvis, no és criptogràfic). */
 function hashText(text: string): string {
   let h = 5381;
