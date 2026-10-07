@@ -155,7 +155,7 @@ export function Teaser() {
   const [, setTick] = useState(0);
   const [rascades, setRascades] = useState<number[]>(() => (simT === null ? llegir<number[]>(KEY, []) : []));
   const [ovr, setOvr] = useState<Overrides>(() => llegir<Overrides>(KEY_OVR, {}));
-  const [flags, setFlags] = useState<Flags>(() => leggir<Flags>(KEY_FLAGS, { senseHores: false, circuit: false }));
+  const [flags, setFlags] = useState<Flags>(() => llegir<Flags>(KEY_FLAGS, { senseHores: false, circuit: false }));
   const [oberta, setOberta] = useState<number | null>(null);
   const [avis, setAvis] = useState<string | null>(null);
 
