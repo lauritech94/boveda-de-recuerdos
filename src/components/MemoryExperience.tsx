@@ -42,7 +42,9 @@ function Pista({ text, color }: { text: string; color: string }) {
 }
 
 export function MemoryExperience({ memory: m, unlocked, unlockedCount, othersUnlocked, onUnlock, onHome }: Props) {
-  const emo = EMOTIONS[m.emotion];
+  // Xarxa de seguretat: si arribés una emoció desconeguda, es fa servir "alegria"
+  // en lloc de deixar la targeta en blanc.
+  const emo = EMOTIONS[m.emotion] || EMOTIONS.alegria;
   const def = GAME_DEFS[m.gameKey];
   const Comp = def?.Comp;
   const { on: soundActive, toggle: toggleSound } = useSound();
