@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Targeta d'aniversari · per imprimir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  @page { size: A4 landscape; margin: 10mm; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    margin: 0; min-height: 100vh; font-family: "Fredoka", Arial, sans-serif; color: #25263a;
+    background: linear-gradient(135deg, #2a1752, #472272);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; gap: 16px;
+  }
+  .barra { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center; color: #e9e4ff; font-size: 14px; max-width: 900px; text-align: center; }
+  .barra button {
+    font-family: inherit; font-size: 15px; font-weight: 600; border: 0; border-radius: 12px; padding: 10px 18px;
+    background: linear-gradient(135deg, #ffd84d, #ff9f43); color: #25263a; cursor: pointer;
+  }
+
+  /* Full plegable: esquerra = contraportada, dreta = portada */
+  .full { display: flex; width: 270mm; height: 180mm; background: #fff; box-shadow: 0 18px 40px rgba(0,0,0,.35); }
+  .cara { width: 135mm; height: 180mm; position: relative; overflow: hidden; }
+  .plec { width: 0; border-left: .4mm dashed #c9c2dc; position: relative; }
+  .plec span {
+    position: absolute; top: 3mm; left: 1.5mm; font-size: 2.6mm; color: #b3abc9; white-space: nowrap; writing-mode: vertical-rl;
+  }
+
+  /* ---------- PORTADA ---------- */
+  .portada {
+    background:
+      radial-gradient(circle at 18% 12%, rgba(255,255,255,.85), transparent 30%),
+      radial-gradient(circle at 85% 90%, rgba(77,150,255,.25), transparent 35%),
+      linear-gradient(160deg, #fff7d6, #ffe9b3 55%, #ffd6a8);
+    display: flex; flex-direction: column; align-items: center; text-align: center; padding: 11mm 10mm;
+  }
+  .bola { position: absolute; border-radius: 50%; opacity: .55; box-shadow: inset -2mm -2.5mm 4mm rgba(0,0,0,.18), inset 2mm 2mm 3mm rgba(255,255,255,.6); }
+  .bola.a { width: 22mm; height: 22mm; background: #ffd93d; top: -6mm; left: -6mm; }
+  .bola.b { width: 14mm; height: 14mm; background: #4d96ff; top: 22mm; right: 7mm; }
+  .bola.c { width: 18mm; height: 18mm; background: #ff6b6b; bottom: 9mm; left: 6mm; }
+  .bola.d { width: 10mm; height: 10mm; background: #6bcb77; bottom: 30mm; right: 10mm; }
+  .bola.e { width: 8mm; height: 8mm; background: #b983ff; top: 48mm; left: 9mm; }
+
+  .superior { font-size: 3.4mm; font-weight: 600; letter-spacing: 1mm; text-transform: uppercase; color: #ff7a1a; position: relative; }
+  .titol { font-size: 12mm; font-weight: 700; line-height: 1; margin: 3mm 0 1mm; position: relative; color: #25263a; }
+  .sub { font-size: 4.6mm; color: #6b5b45; position: relative; }
+  .minion { height: 42mm; margin: 4mm 0 2mm; position: relative; filter: drop-shadow(0 2mm 2mm rgba(0,0,0,.18)); }
+
+  .zona-nfc {
+    position: relative; margin-top: auto; width: 50mm; height: 50mm; border-radius: 50%;
+    background: radial-gradient(circle, #fff 55%, #fff4dc 100%);
+    border: 1mm dashed #ff9f43; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 3mm rgba(255,159,67,.15), 0 2mm 5mm rgba(0,0,0,.08);
+  }
+  .zona-nfc .ones { font-size: 10mm; line-height: 1; }
+  .zona-nfc b { font-size: 4.4mm; margin-top: 1.5mm; color: #25263a; }
+  .zona-nfc small { font-size: 3mm; color: #8b7a5f; margin-top: .5mm; }
+
+  /* ---------- CONTRAPORTADA ---------- */
+  .contra {
+    background: linear-gradient(160deg, #2a1752, #472272); color: #fff; padding: 14mm 11mm;
+    display: flex; flex-direction: column;
+  }
+  .contra .per { font-size: 3.4mm; letter-spacing: 1mm; text-transform: uppercase; color: #ffd84d; }
+  .contra .nom { font-size: 8mm; font-weight: 700; margin: 1mm 0 6mm; outline: none; border-bottom: .3mm dashed transparent; }
+  .contra .nom:hover, .contra .nom:focus { border-bottom-color: #ffd84d; }
+  .missatge { font-size: 4.3mm; line-height: 1.55; color: #ece6ff; outline: none; white-space: pre-line; }
+  .passos { margin-top: 7mm; display: flex; flex-direction: column; gap: 3mm; }
+  .pas { display: flex; gap: 3mm; align-items: flex-start; font-size: 3.8mm; color: #ece6ff; line-height: 1.35; }
+  .pas .n {
+    flex: none; width: 7mm; height: 7mm; border-radius: 50%; background: #ffd84d; color: #25263a;
+    display: grid; place-items: center; font-weight: 700; font-size: 3.6mm;
+  }
+  .portes { margin-top: auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2.5mm; }
+  .porta { border: .4mm solid rgba(255,255,255,.25); border-radius: 3mm; padding: 2.5mm 0; text-align: center; background: rgba(255,255,255,.06); }
+  .porta div { font-size: 6mm; }
+  .porta span { font-size: 3mm; color: #d8cff5; }
+  .signatura { margin-top: 5mm; font-size: 3.4mm; color: #bdb3dd; text-align: right; outline: none; }
+
+  /* Guia de tall (només pantalla) */
+  .guia { color: #cfc6ee; font-size: 13px; max-width: 900px; text-align: left; line-height: 1.5; background: rgba(255,255,255,.07); border-radius: 14px; padding: 12px 16px; }
+  .guia b { color: #ffd84d; }
+
+  @media print {
+    body { background: none; padding: 0; min-height: auto; display: block; }
+    .barra, .guia { display: none; }
+    .full { box-shadow: none; margin: 0 auto; }
+    .contra .nom { border-bottom-color: transparent !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="barra">
+  <span>✏️ Clica sobre el nom, el missatge o la signatura per personalitzar-los.</span>
+  <button onclick="window.print()">🖨️ Imprimir</button>
+</div>
+
+<div class="full">
+  <!-- CONTRAPORTADA (queda darrere en plegar) -->
+  <div class="cara contra">
+    <div class="per">Per a</div>
+    <div class="nom" contenteditable="true">La germana més especial</div>
+    <div class="missatge" contenteditable="true">Avui és el teu dia, i algú no s'ha pogut aguantar…
+
+Un Minion molt trapella ronda per casa i t'ha deixat alguna cosa.</div>
+
+    <div class="passos">
+      <div class="pas"><span class="n">1</span><span>Acosta la part de darrere del mòbil al cercle de la portada.</span></div>
+      <div class="pas"><span class="n">2</span><span>Avui s'obre la primera porta. Rasca-la!</span></div>
+      <div class="pas"><span class="n">3</span><span>Cada matí a les 08:00 se n'obre una de nova. Torna a acostar el mòbil aquí.</span></div>
+    </div>
+
+    <div class="portes">
+      <div class="porta"><div>🎂</div><span>4 nov</span></div>
+      <div class="porta"><div>🔒</div><span>5 nov</span></div>
+      <div class="porta"><div>🔒</div><span>6 nov</span></div>
+      <div class="porta"><div>🔒</div><span>7 nov</span></div>
+    </div>
+    <div class="signatura" contenteditable="true">Amb molt d'amor 💛</div>
+  </div>
+
+  <div class="plec"><span>· · · plegar aquí · · ·</span></div>
+
+  <!-- PORTADA -->
+  <div class="cara portada">
+    <span class="bola a"></span><span class="bola b"></span><span class="bola c"></span><span class="bola d"></span><span class="bola e"></span>
+    <div class="superior">Missatge secret</div>
+    <div class="titol">Per molts anys!</div>
+    <div class="sub">Algú t'ha deixat una sorpresa…</div>
+    <img class="minion" src="../minions/minion.png" alt="" onerror="this.outerHTML='<div style=&quot;font-size:28mm;margin:4mm 0&quot;>🍌</div>'" />
+    <div class="zona-nfc">
+      <div class="ones">📱</div>
+      <b>Acosta el mòbil aquí</b>
+      <small>i descobreix-ho</small>
+    </div>
+  </div>
+</div>
+
+<div class="guia">
+  <b>Com muntar-la:</b><br>
+  1. Imprimeix en <b>A4 horitzontal</b>, a mida real (100 %, sense "ajustar a la pàgina"). Millor en paper gruixut (200-250 g).<br>
+  2. Retalla el rectangle i plega'l per la línia de punts, amb el dibuix cap enfora.<br>
+  3. <b>Enganxa l'adhesiu NFC per dins</b>, just darrere del cercle taronja. Així no es veu i el mòbil el llegeix a través del paper.<br>
+  4. Grava a l'NFC aquest enllaç: <b>https://lauritech94.github.io/boveda-de-recuerdos/?sorpresa=1</b> i prova-ho abans amb un mòbil.
+</div>
+
+</body>
+</html>

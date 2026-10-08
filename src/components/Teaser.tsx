@@ -4,6 +4,7 @@ import { MinionImg } from "./MinionImg";
 import { GameScratch } from "../games/set4";
 import { playSound, vibrate } from "./useSound";
 import { DEFAULT_TEASER_DAYS, TeaserDay } from "../data/memories";
+import { loadFinal } from "../data/store";
 
 /**
  * 🗓️ CALENDARI D'ANTICIPACIÓ  ·  enllaç de l'NFC: ?sorpresa=1
@@ -15,7 +16,7 @@ import { DEFAULT_TEASER_DAYS, TeaserDay } from "../data/memories";
  * ⚠️ IMPORTANT: les portes 2 i 3 no han de donar cap pista del joc de les esferes.
  * Només la 4 revela on i a quina hora.
  *
- * ─── PROVES (només nosaltres; el panell admin NO edita textos, només obre/tanca) ──
+ * ─── PROVES (només nosaltres) ───────────────────────────────────────────────
  *   ?sorpresa=1&admin=minion2026       → panell de control amagat
  *   ?sorpresa=1&ara=2026-11-05T09:00   → simula un dia/hora concret
  * ────────────────────────────────────────────────────────────────────────────
@@ -111,13 +112,11 @@ function portaOberta(d: Dia, now: number, ovr: Overrides, flags: Flags): boolean
 
 const COLORS = ["#ffd93d", "#4d96ff", "#ff6b6b", "#6bcb77", "#b983ff"];
 
-/** Les portes arriben ja carregades des de l'App (mateixa font que el panell ?editar=1:
- *  codi → recuerdos.json publicat → canvis locals). El calendari no carrega res pel seu compte. */
-export function Teaser({ teaserDays }: { teaserDays?: TeaserDay[] }) {
+export function Teaser() {
   const [simT] = useState<number | null>(usarSimulacio);
   const [offset] = useState(() => (simT === null ? 0 : simT - Date.now()));
   const [, setTick] = useState(0);
-  const days: Dia[] = mapTeaserDays(teaserDays && teaserDays.length ? teaserDays : DEFAULT_TEASER_DAYS);
+  const [days, setDays] = useState<Dia[]>(() => mapTeaserDays(loadFinal().teaserDays || DEFAULT_TEASER_DAYS));
   const [rascades, setRascades] = useState<number[]>(() => (simT === null ? llegir<number[]>(KEY, []) : []));
   const [ovr, setOvr] = useState<Overrides>(() => llegir<Overrides>(KEY_OVR, {}));
   const [flags, setFlags] = useState<Flags>(() => llegir<Flags>(KEY_FLAGS, { senseHores: false, circuit: false }));
@@ -130,6 +129,16 @@ export function Teaser({ teaserDays }: { teaserDays?: TeaserDay[] }) {
   useEffect(() => {
     const t = setInterval(() => setTick((n) => n + 1), 1000);
     return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    import("../data/store").then(({ loadPublished }) => {
+      loadPublished().then((pub) => {
+        if (pub?.final?.teaserDays) {
+          setDays(mapTeaserDays(pub.final.teaserDays));
+        }
+      });
+    });
   }, []);
 
   useEffect(() => {
@@ -275,10 +284,10 @@ export function Teaser({ teaserDays }: { teaserDays?: TeaserDay[] }) {
                 {d.dia} nov
               </a>
             ))}
+            <a href={`${base}?editar=1`} className="rounded-lg bg-amber-300 px-2.5 py-1.5 text-[11px] font-bold text-stone-900 hover:bg-amber-200">
+              ✏️ Editar textos i fotos al panell
+            </a>
           </div>
-          <p className="mt-2 text-[11px] font-semibold text-white/50">
-            Els textos i fotos de les portes es canvien només a <code>?editar=1</code> (secció groga «4 portes»).
-          </p>
 
           <p className="mt-3 text-[11px] font-bold text-amber-200">
             ⚠️ Abans de donar-li el mòbil: prem «Tot automàtic» i comprova que cap porta digui «oberta a mà».
