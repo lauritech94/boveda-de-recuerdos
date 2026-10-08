@@ -1,4 +1,4 @@
-import { CONTENT_VERSION, DEFAULT_MEMORIES, EMOTIONS, FINAL_DEFAULT, Memory } from "./memories";
+import { CONTENT_VERSION, DEFAULT_MEMORIES, DEFAULT_TEASER_DAYS, EMOTIONS, FINAL_DEFAULT, Memory } from "./memories";
 import type { EmotionKey } from "./memories";
 
 /** Les claus inclouen la versió del contingut: si canvio un text o un joc al codi i pujo
@@ -80,7 +80,13 @@ export function clearLocalOverrides() {
   });
 }
 
-export type PublishedData = { memories: Partial<Memory>[]; final: Partial<FinalMemory>; v?: number };
+export type PublishedData = {
+  memories: Partial<Memory>[];
+  final: Partial<FinalMemory>;
+  v?: number;
+  sig?: string;
+  mode?: "full" | "partial";
+};
 /** Dades llegides de recuerdos.json d'una versió anterior del codi (per avisar a l'editor). */
 let stalePublished = false;
 export function publishedIsStale() {
@@ -362,7 +368,7 @@ if (typeof window !== "undefined") {
 
 /* ---------- Contenido publicado en la web (public/recuerdos.json) ---------- */
 
-export async function loadPublished(): Promise<{ memories: Partial<Memory>[]; final: Partial<FinalMemory>; v?: number; sig: string } | null> {
+export async function loadPublished(): Promise<{ memories: Partial<Memory>[]; final: Partial<FinalMemory>; v?: number; sig: string; mode: "full" | "partial" } | null> {
   try {
     // ?t=… evita la memòria cau de GitHub Pages (fins a 10 min): sempre arriba l'última versió
     const url = new URL(`recuerdos.json?t=${Date.now()}`, window.location.href).toString();
@@ -376,15 +382,19 @@ export async function loadPublished(): Promise<{ memories: Partial<Memory>[]; fi
     const sig = hashText(text);
     publishedSig = sig;
     const v = typeof data.v === "number" ? data.v : 1;
+    const mode: "full" | "partial" = data.mode === "full" ? "full" : "partial";
     stalePublished = v < CONTENT_VERSION;
-    if (!stalePublished) return { memories: data.memories, final: data.final || {}, v, sig };
+    // Un snapshot complet és autoritari: no es neteja ni es barreja amb memories.ts,
+    // encara que tingui una versió anterior. És exactament el que s'ha editat al panell.
+    if (mode === "full") return { memories: data.memories, final: data.final || {}, v, sig, mode };
+    if (!stalePublished) return { memories: data.memories, final: data.final || {}, v, sig, mode };
     // JSON d'una versió anterior: conserva els canvis que l'usuari va editar,
     // però neteja valors antics coneguts. El gameKey continuarà sent decidit per
     // memories.ts tret que el canvi s'hagi fet explícitament des del desplegable.
     const mems = (data.memories as Partial<Memory>[])
       .map((o) => cleanLegacy(o))
       .filter((x): x is Partial<Memory> => !!x && typeof x.id === "number");
-    return { memories: mems, final: data.final || {}, v, sig };
+    return { memories: mems, final: data.final || {}, v, sig, mode };
   } catch {
     return null;
   }
@@ -412,35 +422,22 @@ export function resetProgress() {
 
 /* ---------- Exportar / importar ---------- */
 
-/** Només els camps que difereixen del valor per defecte del codi. */
-function pickDiff<T extends object>(base: T, cur: T, keys: (keyof T)[]): Partial<T> {
-  const out: Partial<T> = {};
-  keys.forEach((k) => {
-    if (JSON.stringify(base[k]) !== JSON.stringify(cur[k])) (out as Record<string, unknown>)[k as string] = cur[k];
-  });
-  return out;
-}
-
-const MEM_KEYS: (keyof Memory)[] = ["kind", "title", "emotion", "emotion2", "when", "hint", "gameKey", "gameWhy", "message", "photo", "photoCaption", "config"];
-const FINAL_KEYS = ["homeText", "title", "message", "photo", "teaserDays"] as const;
-
-/** Exporta NOMÉS el que s'ha editat al panell. Així el recuerdos.json no tapa mai
- *  els valors que venen de memories.ts (emojis, jocs per defecte…). */
+/** Exporta un SNAPSHOT COMPLET. Desde aquest format, recuerdos.json és l'única font
+ *  de títols, colors/emocions, jocs, textos, fotos i calendari. memories.ts només és
+ *  una plantilla de recuperació si encara no hi ha cap JSON publicat. */
 export function exportAll(memories: Memory[], final: FinalMemory, filename = "recuerdos.json") {
-  const diff = memories
-    .map((m) => {
-      const base = DEFAULT_MEMORIES.find((d) => d.id === m.id);
-      if (!base) return m as unknown as Partial<Memory> & { id: number };
-      const norm = (x: Memory) => ({ ...x, config: x.config && Object.keys(x.config).length ? x.config : undefined });
-      const d = pickDiff(norm(base), norm(m), MEM_KEYS);
-      // JSON.stringify omet `undefined`; fem servir null perquè també es pugui
-      // eliminar una segona emoció que venia configurada per defecte.
-      if (base.emotion2 && !m.emotion2) (d as Record<string, unknown>).emotion2 = null;
-      return Object.keys(d).length ? { id: m.id, ...d } : null;
-    })
-    .filter((x): x is Partial<Memory> & { id: number } => x !== null);
-  const finalDiff = pickDiff(FINAL_DEFAULT, final, [...FINAL_KEYS] as unknown as (keyof typeof FINAL_DEFAULT)[]);
-  const payload = { v: CONTENT_VERSION, exportedAt: Date.now(), memories: diff, final: finalDiff };
+  const completeMemories = memories.map((m) => ({
+    ...m,
+    emotion2: m.emotion2 || null,
+    config: m.config || {},
+  }));
+  const payload = {
+    mode: "full" as const,
+    v: CONTENT_VERSION,
+    exportedAt: Date.now(),
+    memories: completeMemories,
+    final: { ...final, teaserDays: final.teaserDays || DEFAULT_TEASER_DAYS },
+  };
   const text = JSON.stringify(payload, null, 2);
   // Només el recuerdos.json principal (no les còpies de seguretat): quan el publiquis,
   // l'empremta coincidirà i aquest navegador conservarà els seus canvis.
@@ -454,14 +451,22 @@ export function exportAll(memories: Memory[], final: FinalMemory, filename = "re
   a.click();
 }
 
-/** Importa un JSON (nou format parcial o antic format complet) i l'aplica sobre els valors per defecte. */
+/** Importa snapshots complets i també JSON antics parcials. */
 export function importAll(file: File): Promise<{ memories: Memory[]; final: FinalMemory }> {
   return new Promise((res, rej) => {
     const r = new FileReader();
     r.onload = () => {
       try {
         const data = JSON.parse(String(r.result));
-        res({ memories: applyMemoryOverrides(DEFAULT_MEMORIES, data.memories || []), final: mergeFinal(data.final || {}) });
+        const full = data.mode === "full" && Array.isArray(data.memories) && data.memories.length === 30;
+        const imported = full
+          ? data.memories.map((m: Memory & { emotion2?: EmotionKey | null }) => ({
+              ...m,
+              emotion2: m.emotion2 || undefined,
+              config: m.config || {},
+            }))
+          : applyMemoryOverrides(DEFAULT_MEMORIES, data.memories || []);
+        res({ memories: imported, final: full ? mergeFinal(data.final || {}) : mergeFinal(data.final || {}) });
       } catch (e) {
         rej(e);
       }

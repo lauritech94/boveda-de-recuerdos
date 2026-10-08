@@ -4,7 +4,6 @@ import { MinionImg } from "./MinionImg";
 import { GameScratch } from "../games/set4";
 import { playSound, vibrate } from "./useSound";
 import { DEFAULT_TEASER_DAYS, TeaserDay } from "../data/memories";
-import { loadFinal } from "../data/store";
 
 /**
  * 🗓️ CALENDARI D'ANTICIPACIÓ  ·  enllaç de l'NFC: ?sorpresa=1
@@ -112,11 +111,13 @@ function portaOberta(d: Dia, now: number, ovr: Overrides, flags: Flags): boolean
 
 const COLORS = ["#ffd93d", "#4d96ff", "#ff6b6b", "#6bcb77", "#b983ff"];
 
-export function Teaser() {
+export function Teaser({ daysData }: { daysData?: TeaserDay[] }) {
   const [simT] = useState<number | null>(usarSimulacio);
   const [offset] = useState(() => (simT === null ? 0 : simT - Date.now()));
   const [, setTick] = useState(0);
-  const [days, setDays] = useState<Dia[]>(() => mapTeaserDays(loadFinal().teaserDays || DEFAULT_TEASER_DAYS));
+  // L'App no munta el calendari fins que records.json ja està carregat.
+  // Per tant aquí només usem les dades definitives que ens passa l'App: cap parpelleig.
+  const days = mapTeaserDays(daysData || DEFAULT_TEASER_DAYS);
   const [rascades, setRascades] = useState<number[]>(() => (simT === null ? llegir<number[]>(KEY, []) : []));
   const [ovr, setOvr] = useState<Overrides>(() => llegir<Overrides>(KEY_OVR, {}));
   const [flags, setFlags] = useState<Flags>(() => llegir<Flags>(KEY_FLAGS, { senseHores: false, circuit: false }));
@@ -129,16 +130,6 @@ export function Teaser() {
   useEffect(() => {
     const t = setInterval(() => setTick((n) => n + 1), 1000);
     return () => clearInterval(t);
-  }, []);
-
-  useEffect(() => {
-    import("../data/store").then(({ loadPublished }) => {
-      loadPublished().then((pub) => {
-        if (pub?.final?.teaserDays) {
-          setDays(mapTeaserDays(pub.final.teaserDays));
-        }
-      });
-    });
   }, []);
 
   useEffect(() => {

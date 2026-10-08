@@ -67,17 +67,19 @@
   .contra .per { font-size: 3.4mm; letter-spacing: 1mm; text-transform: uppercase; color: #ffd84d; }
   .contra .nom { font-size: 8mm; font-weight: 700; margin: 1mm 0 6mm; outline: none; border-bottom: .3mm dashed transparent; }
   .contra .nom:hover, .contra .nom:focus { border-bottom-color: #ffd84d; }
-  .missatge { font-size: 4.3mm; line-height: 1.55; color: #ece6ff; outline: none; white-space: pre-line; }
-  .passos { margin-top: 7mm; display: flex; flex-direction: column; gap: 3mm; }
-  .pas { display: flex; gap: 3mm; align-items: flex-start; font-size: 3.8mm; color: #ece6ff; line-height: 1.35; }
-  .pas .n {
-    flex: none; width: 7mm; height: 7mm; border-radius: 50%; background: #ffd84d; color: #25263a;
-    display: grid; place-items: center; font-weight: 700; font-size: 3.6mm;
+  .missatge { font-size: 4.7mm; line-height: 1.6; color: #ece6ff; outline: none; white-space: pre-line; }
+  .frase-gran {
+    margin: 7mm 0 6mm; padding: 6mm; border-left: 1.2mm solid #ffd84d; border-radius: 0 4mm 4mm 0;
+    background: rgba(255,255,255,.07); font-size: 6.2mm; font-weight: 600; line-height: 1.35;
+    color: #fff7d6; outline: none;
   }
-  .portes { margin-top: auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2.5mm; }
-  .porta { border: .4mm solid rgba(255,255,255,.25); border-radius: 3mm; padding: 2.5mm 0; text-align: center; background: rgba(255,255,255,.06); }
-  .porta div { font-size: 6mm; }
-  .porta span { font-size: 3mm; color: #d8cff5; }
+  .desitjos { margin-top: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; }
+  .desig {
+    min-height: 25mm; border: .4mm solid rgba(255,255,255,.20); border-radius: 4mm; padding: 3.5mm 2mm;
+    text-align: center; background: rgba(255,255,255,.06); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .desig div { font-size: 7mm; line-height: 1; }
+  .desig span { margin-top: 2mm; font-size: 3.1mm; color: #ddd5f5; line-height: 1.25; outline: none; }
   .signatura { margin-top: 5mm; font-size: 3.4mm; color: #bdb3dd; text-align: right; outline: none; }
 
   /* Guia de tall (només pantalla) */
@@ -104,21 +106,14 @@
   <div class="cara contra">
     <div class="per">Per a</div>
     <div class="nom" contenteditable="true">La germana més especial</div>
-    <div class="missatge" contenteditable="true">Avui és el teu dia, i algú no s'ha pogut aguantar…
+    <div class="missatge" contenteditable="true">Avui celebrem que el món és una mica més bonic des que tu hi ets.</div>
 
-Un Minion molt trapella ronda per casa i t'ha deixat alguna cosa.</div>
+    <div class="frase-gran" contenteditable="true">Que aquest nou any et porti moments que valguin la pena recordar per sempre.</div>
 
-    <div class="passos">
-      <div class="pas"><span class="n">1</span><span>Acosta la part de darrere del mòbil al cercle de la portada.</span></div>
-      <div class="pas"><span class="n">2</span><span>Avui s'obre la primera porta. Rasca-la!</span></div>
-      <div class="pas"><span class="n">3</span><span>Cada matí a les 08:00 se n'obre una de nova. Torna a acostar el mòbil aquí.</span></div>
-    </div>
-
-    <div class="portes">
-      <div class="porta"><div>🎂</div><span>4 nov</span></div>
-      <div class="porta"><div>🔒</div><span>5 nov</span></div>
-      <div class="porta"><div>🔒</div><span>6 nov</span></div>
-      <div class="porta"><div>🔒</div><span>7 nov</span></div>
+    <div class="desitjos">
+      <div class="desig"><div>💛</div><span contenteditable="true">Molta alegria</span></div>
+      <div class="desig"><div>✨</div><span contenteditable="true">Il·lusions noves</span></div>
+      <div class="desig"><div>🌍</div><span contenteditable="true">Aventures juntes</span></div>
     </div>
     <div class="signatura" contenteditable="true">Amb molt d'amor 💛</div>
   </div>

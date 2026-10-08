@@ -142,15 +142,31 @@ export default function App() {
           setReady(true);
           return;
         }
-        const base = applyMemoryOverrides(DEFAULT_MEMORIES, pub.memories);
+        // Snapshot complet: records.json és autoritari i NO es barreja amb memories.ts.
+        // JSON antic parcial: només es fa la barreja temporal per poder migrar-lo des de l'editor.
+        const isFull = pub.mode === "full" && pub.memories.length === 30;
+        const base: Memory[] = isFull
+          ? pub.memories.map((raw) => {
+              const m = raw as Memory & { emotion2?: EmotionKey | null };
+              return { ...m, emotion2: m.emotion2 || undefined, config: m.config || {} };
+            })
+          : applyMemoryOverrides(DEFAULT_MEMORIES, pub.memories);
         const localIsStale = hasLocalOverrides() && getLocalBaseSig() !== pub.sig;
         if (localIsStale) {
           clearLocalOverrides();
           setMemories(base);
-          setFinal(mergeFinal(pub.final));
+          setFinal(isFull ? (pub.final as typeof FINAL_DEFAULT) : mergeFinal(pub.final));
         } else {
-          setMemories(applyMemoryOverrides(base, loadLocalMemoryOverrides()));
-          setFinal(mergeFinal(pub.final, loadLocalFinalOverride()));
+          // Al joc públic mana sempre records.json. Els canvis locals només es veuen al panell
+          // mentre s'estan editant i abans de tornar a exportar.
+          setMemories(editing ? applyMemoryOverrides(base, loadLocalMemoryOverrides()) : base);
+          setFinal(
+            editing
+              ? mergeFinal(isFull ? (pub.final as typeof FINAL_DEFAULT) : pub.final, loadLocalFinalOverride())
+              : isFull
+              ? (pub.final as typeof FINAL_DEFAULT)
+              : mergeFinal(pub.final)
+          );
         }
         setReady(true);
       })
@@ -207,12 +223,28 @@ export default function App() {
     </div>
   );
 
+  /* ---------- CÀRREGA NEUTRA ABANS DE QUALSEVOL CONTINGUT ----------
+   * No es renderitza cap títol, color, esfera, calendari ni editor fins haver rebut
+   * records.json. Això elimina definitivament el micro-parpelleig de dades antigues. */
+  if (!ready) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <Fons />
+        <main className="tarjeta flex flex-col items-center py-14 text-center">
+          <div className="h-24 w-24 animate-pulse rounded-full bg-gradient-to-br from-stone-200 to-stone-400 shadow-inner" />
+          <h1 className="titol mt-5">La Càmera dels Records</h1>
+          <p className="subtitulo">Carregant…</p>
+        </main>
+      </div>
+    );
+  }
+
   /* ---------- AVANÇAMENT DE L'ANIVERSARI (?sorpresa=1) ---------- */
   if (teaserMode) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
         <Fons />
-        <Teaser />
+        <Teaser daysData={final.teaserDays} />
       </div>
     );
   }
@@ -233,24 +265,6 @@ export default function App() {
           onHome={goHome}
         />
         {printing && <PrintSheets memories={memories} onClose={() => setPrinting(false)} />}
-      </div>
-    );
-  }
-
-  /* ---------- CÀRREGA NEUTRA (evita el parpelleig del text per defecte) ---------- */
-  if (!ready && !editing) {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <Fons />
-        <main className="tarjeta flex flex-col items-center py-14 text-center">
-          {active ? (
-            <Sphere emotion="alegria" size={110} locked pulse />
-          ) : (
-            <div className="animate-floaty"><MinionImg size={110} /></div>
-          )}
-          <h1 className="titol mt-5">{active ? `Esfera ${pad(active.id)}` : APP_NAME}</h1>
-          <p className="subtitulo">Obrint la càmera dels records…</p>
-        </main>
       </div>
     );
   }
