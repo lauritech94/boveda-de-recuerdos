@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bitllet d'avió · per imprimir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  @page { size: A4 landscape; margin: 12mm; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    margin: 0; min-height: 100vh; font-family: "Fredoka", Arial, sans-serif; color: #1f2340;
+    background: radial-gradient(circle at 20% 10%, #fff7d6, transparent 40%), linear-gradient(135deg, #e9e4ff, #fff1d6);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; gap: 18px;
+  }
+  .barra { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; font-size: 14px; color: #5b5470; }
+  .barra button {
+    font-family: inherit; font-size: 15px; font-weight: 600; border: 0; border-radius: 12px; padding: 10px 18px;
+    background: linear-gradient(135deg, #ffd84d, #ff9f43); color: #1f2340; cursor: pointer; box-shadow: 0 6px 14px rgba(255,159,67,.35);
+  }
+
+  /* ---------- BITLLET ---------- */
+  .bitllet {
+    width: 250mm; height: 95mm; display: flex; border-radius: 7mm; overflow: hidden; position: relative;
+    background: #fffdf7; box-shadow: 0 18px 40px rgba(31,35,64,.22);
+  }
+  .principal { flex: 1; display: flex; flex-direction: column; position: relative; }
+  .cap {
+    height: 20mm; padding: 0 8mm; display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(110deg, #2f6bd8, #4d96ff 55%, #7fb3ff); color: #fff;
+  }
+  .companyia { display: flex; align-items: center; gap: 3mm; font-weight: 700; font-size: 6.2mm; letter-spacing: .3mm; }
+  .companyia .logo {
+    width: 11mm; height: 11mm; border-radius: 50%; background: #ffd84d; display: grid; place-items: center;
+    font-size: 6.5mm; box-shadow: inset 0 -1mm 0 rgba(0,0,0,.12);
+  }
+  .targeta-embarc { text-align: right; font-size: 3.2mm; letter-spacing: 1.2mm; text-transform: uppercase; opacity: .9; }
+  .targeta-embarc b { display: block; font-size: 5mm; letter-spacing: .4mm; }
+
+  .cos { flex: 1; padding: 5mm 8mm 4mm; display: flex; flex-direction: column; justify-content: space-between; }
+  .ruta { display: flex; align-items: center; gap: 5mm; }
+  .ciutat .codi { font-family: "Space Mono", monospace; font-weight: 700; font-size: 15mm; line-height: 1; color: #1f2340; }
+  .ciutat .nom { font-size: 3.6mm; color: #6b6585; margin-top: 1mm; }
+  .ciutat.desti .codi {
+    color: transparent; -webkit-text-stroke: .5mm #ff9f43; letter-spacing: 1mm;
+  }
+  .avio { flex: 1; display: flex; align-items: center; gap: 2mm; color: #4d96ff; }
+  .avio .linia { flex: 1; border-top: .7mm dashed #b9c9ec; }
+  .avio .icona { font-size: 8mm; transform: rotate(0deg); }
+
+  .camps { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 4mm; }
+  .camp .etiqueta { font-size: 2.6mm; text-transform: uppercase; letter-spacing: .6mm; color: #9a93b3; }
+  .camp .valor {
+    font-size: 4.6mm; font-weight: 600; color: #1f2340; margin-top: .6mm; min-height: 6mm;
+    border-bottom: .3mm dashed transparent; outline: none;
+  }
+  .camp .valor[contenteditable]:hover, .camp .valor[contenteditable]:focus { border-bottom-color: #ffb26b; }
+  .camp .valor.misteri { color: #ff7a1a; }
+
+  .peu { display: flex; align-items: flex-end; justify-content: space-between; gap: 6mm; }
+  .frase { font-size: 3.6mm; color: #5b5470; max-width: 120mm; line-height: 1.35; }
+  .frase b { color: #2f6bd8; }
+  .codi-barres {
+    width: 62mm; height: 11mm; border-radius: 1mm;
+    background: repeating-linear-gradient(90deg, #1f2340 0 .5mm, transparent .5mm 1.1mm, #1f2340 1.1mm 2mm, transparent 2mm 2.4mm, #1f2340 2.4mm 2.7mm, transparent 2.7mm 3.6mm);
+  }
+
+  /* segell */
+  .segell {
+    position: absolute; right: 14mm; top: 27mm; width: 30mm; height: 30mm; border-radius: 50%;
+    border: .8mm solid rgba(240,67,58,.55); color: rgba(240,67,58,.65); display: grid; place-items: center; text-align: center;
+    transform: rotate(-14deg); font-weight: 700; font-size: 3.2mm; line-height: 1.15; text-transform: uppercase; letter-spacing: .3mm;
+  }
+  .segell span { font-size: 6.5mm; display: block; }
+
+  /* trepat */
+  .trepat { width: 0; position: relative; border-left: .7mm dashed #d6d0e6; margin: 5mm 0; }
+  .trepat::before, .trepat::after {
+    content: ""; position: absolute; left: -5mm; width: 10mm; height: 10mm; border-radius: 50%;
+    background: #ece6fb;
+  }
+  .trepat::before { top: -10mm; }
+  .trepat::after { bottom: -10mm; }
+
+  /* matriu */
+  .matriu { width: 64mm; display: flex; flex-direction: column; background: #fff7e3; }
+  .matriu .cap { background: linear-gradient(110deg, #ff9f43, #ffd84d); color: #1f2340; padding: 0 5mm; justify-content: center; }
+  .matriu .cap .targeta-embarc { text-align: center; }
+  .matriu .cos { padding: 4mm 5mm; gap: 2.5mm; justify-content: flex-start; }
+  .matriu .codi-desti { font-family: "Space Mono", monospace; font-weight: 700; font-size: 11mm; text-align: center; color: transparent; -webkit-text-stroke: .45mm #ff9f43; letter-spacing: 1mm; }
+  .matriu .codi-barres { width: 100%; height: 9mm; margin-top: auto; }
+  .minion { height: 18mm; display: block; margin: 0 auto; }
+
+  @media print {
+    body { background: none; padding: 0; min-height: auto; display: block; }
+    .barra { display: none; }
+    .bitllet { box-shadow: none; margin: 0 auto; }
+    .trepat::before, .trepat::after { background: #fff; }
+    .camp .valor { border-bottom-color: transparent !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="barra">
+  <span>✏️ Pots clicar sobre els textos subratllats per canviar-los abans d'imprimir.</span>
+  <button onclick="window.print()">🖨️ Imprimir</button>
+</div>
+
+<div class="bitllet">
+  <div class="principal">
+    <div class="cap">
+      <div class="companyia"><span class="logo">🍌</span> Minion Airlines</div>
+      <div class="targeta-embarc">Targeta d'embarcament<b>Boarding pass</b></div>
+    </div>
+
+    <div class="cos">
+      <div class="ruta">
+        <div class="ciutat">
+          <div class="codi">CAT</div>
+          <div class="nom">Sortida · Casa</div>
+        </div>
+        <div class="avio"><span class="linia"></span><span class="icona">✈️</span><span class="linia"></span></div>
+        <div class="ciutat desti">
+          <div class="codi">???</div>
+          <div class="nom">Destí · per descobrir</div>
+        </div>
+      </div>
+
+      <div class="camps">
+        <div class="camp">
+          <div class="etiqueta">Passatgera</div>
+          <div class="valor" contenteditable="true">La germana més aventurera</div>
+        </div>
+        <div class="camp">
+          <div class="etiqueta">Data</div>
+          <div class="valor misteri" contenteditable="true">Per definir</div>
+        </div>
+        <div class="camp">
+          <div class="etiqueta">Seient</div>
+          <div class="valor" contenteditable="true">01A · finestra</div>
+        </div>
+        <div class="camp">
+          <div class="etiqueta">Classe</div>
+          <div class="valor" contenteditable="true">VIP ✨</div>
+        </div>
+      </div>
+
+      <div class="peu">
+        <div class="frase" contenteditable="true">El destí és secret, però hi ha una cosa segura: <b>hi anirem juntes</b>. Prepara la maleta i les ganes. 💛</div>
+        <div class="codi-barres"></div>
+      </div>
+    </div>
+
+    <div class="segell"><div><span>✈</span>Viatge<br>confirmat</div></div>
+  </div>
+
+  <div class="trepat"></div>
+
+  <div class="matriu">
+    <div class="cap"><div class="targeta-embarc">Matriu<b>Minion Airlines</b></div></div>
+    <div class="cos">
+      <img class="minion" src="../minions/minion.png" alt="" onerror="this.outerHTML='<div style=&quot;text-align:center;font-size:12mm&quot;>🍌</div>'" />
+      <div class="codi-desti">???</div>
+      <div class="camp"><div class="etiqueta">Porta d'embarcament</div><div class="valor" contenteditable="true">La de casa</div></div>
+      <div class="camp"><div class="etiqueta">Data</div><div class="valor misteri" contenteditable="true">Per definir</div></div>
+      <div class="codi-barres"></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

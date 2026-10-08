@@ -77,6 +77,10 @@ function MemoryForm({ m, onChange }: { m: Memory; onChange: (m: Memory) => void 
               {(Object.keys(EMOTIONS) as EmotionKey[]).map((k) => <option key={k} value={k} className="text-black">{EMOTIONS[k].emoji} {EMOTIONS[k].name}</option>)}
             </select></div>
         </div>
+        <p className="text-[11px] font-semibold text-white/60">
+          Colors de l'esfera: <span className="inline-block h-3 w-3 rounded-full align-middle" style={{ background: EMOTIONS[m.emotion].color }} /> {EMOTIONS[m.emotion].name}
+          {m.emotion2 && <> + <span className="inline-block h-3 w-3 rounded-full align-middle" style={{ background: EMOTIONS[m.emotion2].color }} /> {EMOTIONS[m.emotion2].name}</>}
+        </p>
         <div><label className={labelCls}>Cuándo / subtítulo (en catalán)</label><input value={m.when} onChange={(e) => set({ when: e.target.value })} className={inputCls} placeholder="Estiu 2012" /></div>
         <div><label className={labelCls}>{m.kind === "intro" ? "Texto antes del botón (esfera ya desencriptada)" : "Pista antes del reto (sin desvelar el recuerdo)"}</label><textarea value={m.hint} onChange={(e) => set({ hint: e.target.value })} rows={3} className={inputCls} /></div>
         <div><label className={labelCls}>Mensaje personal (se muestra al desbloquear)</label><textarea value={m.message} onChange={(e) => set({ message: e.target.value })} rows={5} className={inputCls} placeholder="Escriu aquí el teu text…" /></div>
@@ -218,7 +222,7 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-3">
           <div>
             <h2 className="text-lg font-black">Panel de edición · 30 esferas</h2>
-            <p className="text-xs font-semibold text-white/50">Solo lo ves tú (URL con <code>?editar=1</code>). Los cambios se guardan en este navegador.</p>
+            <p className="text-xs font-semibold text-white/50">Només ho veus tu (URL amb <code>?editar=1</code>). Els canvis es guarden en aquest navegador.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button onClick={onPrint} className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-black hover:bg-white/20"><Printer className="h-4 w-4" /> Imprimir fichas</button>
@@ -254,6 +258,8 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
             <button onClick={() => exportAll(memories, final)} className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-sky-300 px-3 py-2 text-xs font-black text-stone-900 hover:bg-sky-200"><Download className="h-4 w-4" /> Regenerar recuerdos.json</button>
           </div>
         )}
+
+        {/* — compatibilidad: el JSON antic estava en castellà — */}
 
         {/* AVÍS: fotos sense publicar */}
         {totalUnpublished > 0 && (
@@ -313,19 +319,19 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
             <button onClick={() => { if (confirm("¿Bloquear de nuevo las 30 esferas en este dispositivo? (No borra fotos ni textos)")) onResetProgress(); }} className="inline-flex items-center gap-1.5 rounded-lg bg-red-500 px-3 py-2 text-xs font-black text-white hover:bg-red-600"><RotateCcw className="h-4 w-4" /> Reiniciar progreso (volver a 0)</button>
             <button onClick={onUnlockAll} className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-black hover:bg-white/20"><Unlock className="h-4 w-4" /> Desbloquear todas (para revisar)</button>
           </div>
-          <p className="mt-2 text-[11px] font-semibold text-white/40">También puedes reiniciar desde cualquier móvil abriendo: <code className="text-emerald-300">{window.location.origin}{window.location.pathname}?reset=1</code> · Solo bloquea las esferas: no toca fotos ni textos.</p>
+          <p className="mt-2 text-[11px] font-semibold text-white/40">També pots reiniciar des de qualsevol mòbil obrint: <code className="text-emerald-300">{window.location.origin}{window.location.pathname}?reset=1</code> · Només bloqueja les esferes: no toca fotos ni textos.</p>
           <p className="mt-1 text-[11px] font-semibold text-amber-200/80">⚠️ Prioridad: <b>textos, fotos y títulos</b> → recuerdos.json y panel mandan sobre el código. <b>Qué juego tiene cada esfera</b> → manda el código, salvo que lo cambies aquí (entonces se marca como "elegido aquí").</p>
         </div>
 
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm font-semibold text-white/70">
-          <p className="font-black text-white">Cómo usarlo</p>
+          <p className="font-black text-white">Com s'utilitza</p>
           <ol className="mt-1 list-decimal space-y-0.5 pl-5">
-            <li>Abre cada esfera, sube la <b className="text-amber-200">foto</b> y escribe el <b className="text-amber-200">mensaje en catalán</b>.</li>
-            <li><b>Tarjeta de inicio</b> (enlace sin <code>?bola=</code>) = mensaje del Minion. Después, esfera <b>1</b> = ya desencriptada, solo botón + foto · <b>10</b> regalo iPhone · <b>20</b> regalo viaje · <b>30</b> vídeo.</li>
-            <li>Pulsa <b>Exportar recuerdos.json</b> y guarda el archivo como <code className="text-emerald-300">public/recuerdos.json</code> en el proyecto → sube a GitHub.</li>
-            <li>Graba en cada NFC la URL de su esfera (<code className="text-emerald-300">?bola=N</code>).</li>
+            <li>Obre cada esfera, puja la <b className="text-amber-200">foto</b> i escriu el <b className="text-amber-200">missatge en català</b>.</li>
+            <li><b>Targeta d'inici</b> (enllaç sense <code>?bola=</code>) = missatge del Minion. Després, esfera <b>1</b> = ja desxifrada · <b>10</b> regal iPhone · <b>20</b> regal viatge · <b>30</b> vídeo.</li>
+            <li>Prem <b>Exportar recuerdos.json</b> i puja'l a <code className="text-emerald-300">public/recuerdos.json</code>.</li>
+            <li>Grava a cada NFC la URL de la seva esfera (<code className="text-emerald-300">?bola=N</code>).</li>
           </ol>
-          <p className="mt-2 text-xs text-white/40">Esferas listas: {memories.filter(ready).length}/30</p>
+          <p className="mt-2 text-xs text-white/40">Esferes llestes: {memories.filter(ready).length}/30</p>
         </div>
 
         <div className="mb-4 overflow-hidden rounded-2xl border border-amber-300/30 bg-gradient-to-br from-amber-300/10 to-fuchsia-500/10">
@@ -361,7 +367,7 @@ export function Editor({ memories, final, progress, onChange, onChangeFinal, onR
               <span className="text-2xl">🗓️</span>
               <div>
                 <p className="font-black text-amber-200">🗓️ Las 4 puertas del calendario de anticipación (4, 5, 6 y 7 nov)</p>
-                <p className="text-xs font-semibold text-white/60">Enlace de la tarjeta NFC de cumpleaños: <code>?sorpresa=1</code>. Aquí puedes editar los textos, lo que se rasca y las fotos de cada día.</p>
+                <p className="text-xs font-semibold text-white/60">Enllaç de la targeta NFC del 4 de novembre: <code>?sorpresa=1</code>. Aquí pots editar els textos, el que es rasca i les fotos de cada dia.</p>
               </div>
             </div>
             {showTeaser ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}

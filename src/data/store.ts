@@ -1,4 +1,4 @@
-import { CONTENT_VERSION, DEFAULT_MEMORIES, FINAL_DEFAULT, Memory } from "./memories";
+import { CONTENT_VERSION, DEFAULT_MEMORIES, EMOTIONS, FINAL_DEFAULT, Memory } from "./memories";
 import type { EmotionKey } from "./memories";
 
 /** Les claus inclouen la versió del contingut: si canvio un text o un joc al codi i pujo
@@ -166,12 +166,27 @@ function cleanLegacy(o: Partial<Memory> | undefined): Partial<Memory> | undefine
   const c: Partial<Memory> = { ...o };
   // Esfera 1: el text antic del Minion (amb variants) ara és a la targeta d'inici
   if (o.id === 1 && typeof c.hint === "string" && c.hint.includes("Minion molt trapella")) delete c.hint;
-  // Si l'emoció o la segona emoció no existeixen o no són vàlides, es tornen al per defecte del codi.
-  // D'aquesta manera el color de les boles surt correcte encara que el JSON antic tingui coses rares.
-  const EMO_KEYS: EmotionKey[] = ["alegria", "tristesa", "rabia", "fastic", "por"];
-  const localEmocions = ["alegria", "tristeza", "rabia", "asco", "miedo", "fastic", "por", "aligría", "rabíá"];
-  if (typeof c.emotion === "string" && (!EMO_KEYS.includes(c.emotion as EmotionKey) || localEmocions.includes(c.emotion))) delete c.emotion;
-  if (typeof c.emotion2 === "string" && (!EMO_KEYS.includes(c.emotion2 as EmotionKey) || localEmocions.includes(c.emotion2))) delete c.emotion2;
+  // Emocions d'edicions anteriors → les 6 definitives.
+  // Sense això, les boles amb una emoció vella tornarien al color per defecte.
+  const aliases: Record<string, EmotionKey> = {
+    // noms en castellà
+    tristeza: "nostalgia", ira: "aventura", asco: "illusio", miedo: "aventura",
+    ansiedad: "aventura", envidia: "bogeria", verguenza: "amor",
+    aburrimiento: "bogeria", nostalgia: "nostalgia", amor: "amor",
+    aventura: "aventura", bogeria: "bogeria", illusio: "illusio", alegria: "alegria",
+    // emocions vistes al catàleg
+    tristesa: "nostalgia", rabia: "aventura", fastic: "illusio", por: "aventura",
+    ansietat: "aventura", enveja: "bogeria", vergonya: "amor", avorriment: "bogeria",
+    // variants de grafia
+    "il·lusio": "illusio", "il·lusió": "illusio",
+  };
+  for (const field of ["emotion", "emotion2"] as const) {
+    const value = c[field];
+    if (value == null) continue;
+    const normalized = aliases[value] || value;
+    if (Object.prototype.hasOwnProperty.call(EMOTIONS, normalized)) c[field] = normalized as EmotionKey;
+    else delete c[field];
+  }
   const legacy = LEGACY[o.id];
   if (!legacy) return c;
   const fields = legacy.fields || {};
@@ -198,6 +213,8 @@ export function applyMemoryOverrides(base: Memory[], over: Partial<Memory>[] = [
   return base.map((m) => {
     const o = { ...(cleanLegacy(over.find((x) => x && x.id === m.id)) || {}) };
     if ((o.config as Record<string, any> | undefined)?.__gameCustom !== "1") delete o.gameKey;
+    // JSON null representa que s'ha tret voluntàriament la segona emoció.
+    if (o.emotion2 === null) o.emotion2 = undefined;
     return { ...m, ...o, config: { ...(m.config || {}), ...(o.config || {}) } };
   });
 }
@@ -367,9 +384,7 @@ export async function loadPublished(): Promise<{ memories: Partial<Memory>[]; fi
     const mems = (data.memories as Partial<Memory>[])
       .map((o) => cleanLegacy(o))
       .filter((x): x is Partial<Memory> => !!x && typeof x.id === "number");
-    const fin: Partial<FinalMemory> = {};
-    if (data.final) fin.photo = data.final.photo;
-    return { memories: mems, final: fin, v, sig };
+    return { memories: mems, final: data.final || {}, v, sig };
   } catch {
     return null;
   }
@@ -418,6 +433,9 @@ export function exportAll(memories: Memory[], final: FinalMemory, filename = "re
       if (!base) return m as unknown as Partial<Memory> & { id: number };
       const norm = (x: Memory) => ({ ...x, config: x.config && Object.keys(x.config).length ? x.config : undefined });
       const d = pickDiff(norm(base), norm(m), MEM_KEYS);
+      // JSON.stringify omet `undefined`; fem servir null perquè també es pugui
+      // eliminar una segona emoció que venia configurada per defecte.
+      if (base.emotion2 && !m.emotion2) (d as Record<string, unknown>).emotion2 = null;
       return Object.keys(d).length ? { id: m.id, ...d } : null;
     })
     .filter((x): x is Partial<Memory> & { id: number } => x !== null);
